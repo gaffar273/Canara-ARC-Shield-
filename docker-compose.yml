@@ -1,0 +1,41 @@
+# Runs the ARC Shield backend joined to the Fabric test-network.
+#
+# Prereq: the Fabric network is up (fabric/scripts/up.sh), which creates the
+# external docker network "fabric_test" and the Org1 crypto material.
+#
+# Inside this network the peer is reached by its container hostname, not
+# localhost — hence the *.example.com endpoints below.
+services:
+  backend:
+    build:
+      context: ./backend
+    image: arc-shield-backend:latest
+    container_name: arc-shield-backend
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      FABRIC_ENABLED: "true"
+      FABRIC_CHANNEL: auditchannel
+      FABRIC_CHAINCODE: audit-ledger
+      FABRIC_MSP_ID: Org1MSP
+      FABRIC_PEER_ENDPOINT: peer0.org1.example.com:7051
+      FABRIC_PEER_HOST_ALIAS: peer0.org1.example.com
+      FABRIC_TLS_CERT_PATH: /fabric/org1/peers/peer0.org1.example.com/tls/ca.crt
+      FABRIC_CERT_DIR: /fabric/org1/users/User1@org1.example.com/msp/signcerts
+      FABRIC_KEY_DIR: /fabric/org1/users/User1@org1.example.com/msp/keystore
+    volumes:
+      - ./fabric/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com:/fabric/org1:ro
+      - backend_uploads:/app/uploads
+      - backend_data:/app/data
+    networks:
+      - fabric_test
+
+volumes:
+  backend_uploads:
+  backend_data:
+
+networks:
+  fabric_test:
+    external: true

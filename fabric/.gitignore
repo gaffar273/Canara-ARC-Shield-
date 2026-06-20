@@ -1,0 +1,6 @@
+# Downloaded by fabric/scripts/up.sh — large, not committed
+fabric-samples/
+install-fabric.sh
+
+# logs
+*.log
