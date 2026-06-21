@@ -44,6 +44,8 @@ export interface Circular {
   stage: PipelineStage;
   document: DocumentMeta;
   textLength: number;
+  refNumber: string | null;
+  references: string[];
 }
 
 export interface Clause {
@@ -62,6 +64,8 @@ export interface IntelligenceResult {
   sections: RegSection[];
   similarTo: { circularId: string; similarity: number } | null;
   clauses: Clause[];
+  refNumber?: string | null;
+  references?: string[];
 }
 
 export interface ComplianceMap {

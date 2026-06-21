@@ -20,10 +20,20 @@ async function runStages(circularId: string): Promise<void> {
   if (!circular) throw fail("NOT_FOUND", `Unknown circular ${circularId}`);
 
   const text = await intakeService.extractText(circularId);
+  const linked = await stateStore.getLinkedCirculars(circularId);
+  const linkedCirculars = await Promise.all(
+    linked.map(async (c) => ({
+      circularId: c.id,
+      refNumber: c.refNumber,
+      title: c.title,
+      text: await intakeService.extractText(c.id),
+    })),
+  );
   const intelligence = await node1.analyze({
     circularId,
     filename: circular.document.filename,
     text,
+    ...(linkedCirculars.length > 0 ? { context: { linkedCirculars } } : {}),
   });
   await stateStore.transition(circularId, "CLASSIFYING", (r, c) => {
     r.intelligence = intelligence;
@@ -31,6 +41,10 @@ async function runStages(circularId: string): Promise<void> {
     c.regulator = intelligence.regulator;
     c.sections = intelligence.sections;
     c.issuedDate = intelligence.issuedDate;
+    if (!c.refNumber && intelligence.refNumber) c.refNumber = intelligence.refNumber;
+    if (intelligence.references?.length) {
+      c.references = [...new Set([...c.references, ...intelligence.references])];
+    }
   });
 
   const maps = await node2.generate({ circularId, clauses: intelligence.clauses });

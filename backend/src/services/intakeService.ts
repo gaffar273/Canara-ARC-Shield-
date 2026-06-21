@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { config } from "../config/index.js";
 import type { Circular } from "../types/domain.js";
 import { sha256, randomId } from "../utils/crypto.js";
+import { extractRefs } from "../utils/refExtractor.js";
 import { fail } from "../utils/errors.js";
 import { ensureDir } from "../store/persistence.js";
 import { stateStore } from "../store/stateStore.js";
@@ -64,6 +65,7 @@ export const intakeService = {
 
     const documentHash = sha256(file.buffer);
     const id = randomId("CIR");
+    const { refNumber, references } = extractRefs(text);
     const storedPath = path.join(config.paths.documents, `${id}.pdf`);
     await ensureDir(config.paths.documents);
     await fs.writeFile(storedPath, file.buffer);
@@ -88,6 +90,8 @@ export const intakeService = {
         storedPath,
       },
       textLength: text.length,
+      refNumber,
+      references,
     };
 
     await stateStore.createCircular(circular);

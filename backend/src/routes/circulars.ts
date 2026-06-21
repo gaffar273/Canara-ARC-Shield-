@@ -52,6 +52,13 @@ circularsRouter.post(
 );
 
 circularsRouter.get(
+  "/:id/references",
+  asyncHandler(async (req, res) => {
+    sendOk(res, await stateStore.referenceGraph(param(req, "id")));
+  }),
+);
+
+circularsRouter.get(
   "/:id/pipeline",
   asyncHandler(async (req, res) => {
     sendOk(res, await orchestrator.status(param(req, "id")));

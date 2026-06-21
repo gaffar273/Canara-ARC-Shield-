@@ -126,6 +126,7 @@ header (`compliance` | `it` | `cxo` | `auditor`).
 | GET  | `/api/circulars/:id` | any role | One circular by id |
 | POST | `/api/circulars/:id/process` | compliance | Kick off async pipeline; returns `{ started }` (202) |
 | GET  | `/api/circulars/:id/pipeline` | any role | Pipeline record (stage, maps, verifications, receipt) |
+| GET  | `/api/circulars/:id/references` | any role | Reference graph: own ref, cited refs (resolved/dangling), and back-edges (`citedBy`) |
 | GET  | `/api/dashboard/summary` | any role | Aggregated executive metrics (cached, TTL) |
 | GET  | `/api/dashboard/role/:role` | any role | MAPs + verifications scoped to a role's workspace |
 | GET  | `/api/ledger/chain` | any role | Full hash-linked ledger |
@@ -136,9 +137,13 @@ header (`compliance` | `it` | `cxo` | `auditor`).
 ### Module contracts
 
 - `services/intakeService` — `ingest(file)` validates PDF by magic bytes, extracts raw text and
-  **neutral file metadata only** (bytes, pages, hash), stores the document, creates the circular,
+  **neutral file metadata only** (bytes, pages, hash), extracts the circular's own ref + cited refs
+  via `utils/refExtractor` (deterministic regex, no AI), stores the document, creates the circular,
   records `CIRCULAR_RECEIVED`. It does NOT classify — regulator, sections, issued date and the
   real title are decided by the Node 1 agent and written back during the CLASSIFYING transition.
+- `utils/refExtractor` — pure `normalizeRef` + `extractRefs(text)`; pulls the own ref (dept ref
+  preferred, since bodies cite by dept ref) and cited refs. `Circular.refNumber` + `references[]`
+  hold the result; `stateStore` derives a `normalizedRef -> id` index in memory (never persisted).
 - `services/orchestrator` — `start(id)` enqueues; the worker drives N1→N2→N3→seal with atomic,
   idempotent `stateStore.transition` calls and a ledger append per stage.
 - `services/ledgerService` — Trust Layer API over the hash-linked ledger; the only place that

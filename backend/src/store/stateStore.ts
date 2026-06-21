@@ -9,6 +9,18 @@ interface StateShape {
   pipelines: Record<string, PipelineRecord>;
 }
 
+export interface ReferenceEdge {
+  ref: string;
+  circularId: string | null;
+}
+
+export interface ReferenceGraph {
+  circularId: string;
+  refNumber: string | null;
+  references: ReferenceEdge[];
+  citedBy: { circularId: string; refNumber: string | null }[];
+}
+
 const empty: StateShape = { circulars: {}, pipelines: {} };
 
 const VALID_TRANSITIONS: Record<PipelineStage, PipelineStage[]> = {
@@ -28,12 +40,24 @@ const VALID_TRANSITIONS: Record<PipelineStage, PipelineStage[]> = {
 class StateStore {
   private readonly lock = new Mutex();
   private cache: StateShape = empty;
+  private refIndex = new Map<string, string>();
   private loaded = false;
 
   private async load(): Promise<void> {
     if (this.loaded) return;
     this.cache = await readJsonFile<StateShape>(config.paths.state, empty);
+    this.refIndex.clear();
+    for (const circular of Object.values(this.cache.circulars)) {
+      this.indexCircular(circular);
+    }
     this.loaded = true;
+  }
+
+  /** Derived index: normalized own-ref -> circular id. First writer wins. */
+  private indexCircular(circular: Circular): void {
+    if (circular.refNumber && !this.refIndex.has(circular.refNumber)) {
+      this.refIndex.set(circular.refNumber, circular.id);
+    }
   }
 
   private async persist(): Promise<void> {
@@ -64,6 +88,7 @@ class StateStore {
     return this.lock.run(async () => {
       await this.load();
       this.cache.circulars[circular.id] = circular;
+      this.indexCircular(circular);
       this.cache.pipelines[circular.id] = {
         circularId: circular.id,
         stage: circular.stage,
@@ -108,9 +133,45 @@ class StateStore {
       record.stage = to;
       record.updatedAt = new Date().toISOString();
       circular.stage = to;
+      this.indexCircular(circular);
       await this.persist();
       return record;
     });
+  }
+
+  /** Resolved + dangling outgoing edges plus incoming back-edges for one circular. */
+  async referenceGraph(circularId: string): Promise<ReferenceGraph> {
+    await this.load();
+    const circular = this.cache.circulars[circularId];
+    if (!circular) throw fail("NOT_FOUND", `Unknown circular ${circularId}`);
+
+    const references: ReferenceEdge[] = circular.references.map((ref) => ({
+      ref,
+      circularId: this.refIndex.get(ref) ?? null,
+    }));
+
+    const citedBy = Object.values(this.cache.circulars)
+      .filter(
+        (c) =>
+          c.id !== circularId &&
+          circular.refNumber !== null &&
+          c.references.includes(circular.refNumber),
+      )
+      .map((c) => ({ circularId: c.id, refNumber: c.refNumber }));
+
+    return { circularId, refNumber: circular.refNumber, references, citedBy };
+  }
+
+  /** Circulars this one explicitly cites, resolved through the ref index. */
+  async getLinkedCirculars(circularId: string): Promise<Circular[]> {
+    await this.load();
+    const circular = this.cache.circulars[circularId];
+    if (!circular) return [];
+    return circular.references
+      .map((ref) => this.refIndex.get(ref))
+      .filter((id): id is string => id !== undefined)
+      .map((id) => this.cache.circulars[id])
+      .filter((c): c is Circular => c !== undefined);
   }
 }
 

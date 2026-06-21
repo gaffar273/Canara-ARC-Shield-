@@ -3,10 +3,18 @@ import type { IntelligenceResult } from "../types/domain.js";
 import { postJson } from "./httpClient.js";
 import { fail } from "../utils/errors.js";
 
+export interface LinkedCircular {
+  circularId: string;
+  refNumber: string | null;
+  title: string;
+  text: string;
+}
+
 export interface IntelligenceRequest {
   circularId: string;
   filename: string;
   text: string;
+  context?: { linkedCirculars: LinkedCircular[] };
 }
 
 /**
