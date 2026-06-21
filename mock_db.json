@@ -1,0 +1,106 @@
+{
+  "clauses": {
+    "capital_req_001": {
+      "clause_id": "capital_req_001",
+      "circular_id": "RBI/2023-24/10",
+      "circular_date": "2023-10-15",
+      "domain": "Risk",
+      "section_title": "Capital Requirements",
+      "raw_text": "Banks must maintain a minimum capital of 1,500,000 INR.",
+      "created_at": "2023-10-15",
+      "source": "RBI Advisory"
+    },
+    "kyc_process_001": {
+      "clause_id": "kyc_process_001",
+      "circular_id": "RBI/2023-24/15",
+      "circular_date": "2023-12-01",
+      "domain": "Compliance",
+      "section_title": "KYC Requirements",
+      "raw_text": "Customer due diligence shall be completed within 30 days of account opening.",
+      "created_at": "2023-12-01",
+      "source": "RBI Advisory"
+    },
+    "aml_threshold_001": {
+      "clause_id": "aml_threshold_001",
+      "circular_id": "RBI/2024-01/05",
+      "circular_date": "2024-01-10",
+      "domain": "Compliance",
+      "section_title": "AML Transaction Reporting",
+      "raw_text": "Suspicious transactions exceeding 1,00,000 INR must be reported within 24 hours.",
+      "created_at": "2024-01-10",
+      "source": "RBI Advisory"
+    },
+    "cybersecurity_001": {
+      "clause_id": "cybersecurity_001",
+      "circular_id": "RBI/2024-02/08",
+      "circular_date": "2024-02-15",
+      "domain": "Information Security",
+      "section_title": "Cybersecurity Standards",
+      "raw_text": "All financial institutions must implement multi-factor authentication (MFA) for customer-facing portals.",
+      "created_at": "2024-02-15",
+      "source": "RBI Advisory"
+    },
+    "treasury_liquidity_001": {
+      "clause_id": "treasury_liquidity_001",
+      "circular_id": "RBI/2024-03/12",
+      "circular_date": "2024-03-20",
+      "domain": "Treasury",
+      "section_title": "Liquidity Coverage Ratio",
+      "raw_text": "Banks must maintain a minimum Liquidity Coverage Ratio (LCR) of 100% of net cash outflows for a 30-day stress period.",
+      "created_at": "2024-03-20",
+      "source": "RBI Advisory"
+    },
+    "data_privacy_001": {
+      "clause_id": "data_privacy_001",
+      "circular_id": "RBI/2024-04/06",
+      "circular_date": "2024-04-10",
+      "domain": "Risk",
+      "section_title": "Customer Data Protection",
+      "raw_text": "Customer personal data must be encrypted at rest using AES-256 encryption or equivalent.",
+      "created_at": "2024-04-10",
+      "source": "RBI Advisory"
+    },
+    "stress_testing_001": {
+      "clause_id": "stress_testing_001",
+      "circular_id": "RBI/2024-05/03",
+      "circular_date": "2024-05-15",
+      "domain": "Risk",
+      "section_title": "Stress Testing Requirements",
+      "raw_text": "Banks must conduct quarterly stress tests on their credit portfolio under adverse market conditions.",
+      "created_at": "2024-05-15",
+      "source": "RBI Advisory"
+    },
+    "board_oversight_001": {
+      "clause_id": "board_oversight_001",
+      "circular_id": "RBI/2024-06/09",
+      "circular_date": "2024-06-01",
+      "domain": "Risk",
+      "section_title": "Board Governance",
+      "raw_text": "The Board must review risk management policies and procedures at least once per quarter.",
+      "created_at": "2024-06-01",
+      "source": "RBI Advisory"
+    },
+    "cyber_incident_001": {
+      "clause_id": "cyber_incident_001",
+      "circular_id": "RBI/2024-07/02",
+      "circular_date": "2024-07-10",
+      "domain": "Information Security",
+      "section_title": "Incident Reporting",
+      "raw_text": "All cyber incidents must be reported to the regulator within 48 hours of discovery.",
+      "created_at": "2024-07-10",
+      "source": "RBI Advisory"
+    },
+    "export_credit_001": {
+      "clause_id": "export_credit_001",
+      "circular_id": "RBI/2024-08/04",
+      "circular_date": "2024-08-15",
+      "domain": "Risk",
+      "section_title": "Export Credit Exposure",
+      "raw_text": "Export credit exposure should not exceed 5% of total advances for any single country.",
+      "created_at": "2024-08-15",
+      "source": "RBI Advisory"
+    }
+  },
+  "compliance_maps": [],
+  "human_review_queue": []
+}
