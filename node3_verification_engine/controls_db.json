@@ -1,0 +1,44 @@
+{
+  "controls": {
+    "CTL-AML-001": {
+      "control_id": "CTL-AML-001",
+      "department": "Compliance",
+      "domain": "kyc",
+      "keywords": ["kyc", "customer", "identification", "due diligence", "aml", "laundering"],
+      "status": "implemented",
+      "evidence_kind": "policy_document",
+      "evidence_ref": "POL-KYC-2024-03",
+      "note": "KYC/AML policy live; periodic CDD enforced."
+    },
+    "CTL-CYBER-001": {
+      "control_id": "CTL-CYBER-001",
+      "department": "Information Security",
+      "domain": "cyber",
+      "keywords": ["multi-factor", "mfa", "authentication", "encryption", "access", "portal"],
+      "status": "partial",
+      "evidence_kind": "system_config",
+      "evidence_ref": "CFG-IAM-MFA-07",
+      "note": "MFA on customer portals; admin biometric rollout in progress."
+    },
+    "CTL-TREASURY-001": {
+      "control_id": "CTL-TREASURY-001",
+      "department": "Treasury",
+      "domain": "capital",
+      "keywords": ["capital", "reserve", "ratio", "minimum", "adequacy", "exposure"],
+      "status": "implemented",
+      "evidence_kind": "control_attestation",
+      "evidence_ref": "ATT-CAP-2024-Q2",
+      "note": "Capital adequacy monitored daily; current ratio above floor."
+    },
+    "CTL-RISK-001": {
+      "control_id": "CTL-RISK-001",
+      "department": "Risk Management",
+      "domain": "risk",
+      "keywords": ["risk", "weight", "limit", "provisioning", "stress"],
+      "status": "missing",
+      "evidence_kind": "gap_finding",
+      "evidence_ref": "GAP-RISK-2024-11",
+      "note": "Revised risk-weight model not yet implemented."
+    }
+  }
+}
