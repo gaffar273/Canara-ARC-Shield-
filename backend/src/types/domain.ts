@@ -23,6 +23,10 @@ export type PipelineStage =
 
 export type MapCategory = "technical" | "policy";
 
+export type ChangeType = "ADDED" | "MODIFIED" | "DELETED";
+
+export type Impact = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
 export type VerificationStatus = "PASS" | "FAIL" | "REVIEW";
 
 export interface DocumentMeta {
@@ -72,9 +76,15 @@ export interface ComplianceMap {
   id: string;
   circularId: string;
   clauseId: string;
-  action: string;
+  changeType: ChangeType;
+  changeReason: string;
+  impact: Impact;
+  summary: string;
+  oldObligation: string | null;
+  newObligation: string;
+  department: string;
   owner: Role;
-  deadline: string;
+  deadline: string | null;
   category: MapCategory;
   confidence: number;
   needsReview: boolean;

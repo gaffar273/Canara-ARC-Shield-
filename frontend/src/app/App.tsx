@@ -18,7 +18,7 @@ import { ApiError } from "../services/client.js";
 import { Loading, ErrorState, EmptyState, Placeholder } from "./components/States.js";
 import type {
   Circular, PipelineStage, SectionScore, LedgerBlock, LedgerKind,
-  Citation, Role,
+  Citation, Role, Impact,
 } from "../services/types.js";
 
 const CB = "#004C97";
@@ -49,6 +49,13 @@ function shortHash(h: string): string {
 function dateOf(iso: string | null): string {
   if (!iso) return "—";
   return iso.slice(0, 10);
+}
+
+function impactColor(impact: Impact): string {
+  if (impact === "CRITICAL") return "#7c2d12";
+  if (impact === "HIGH") return ER;
+  if (impact === "MEDIUM") return WN;
+  return OK;
 }
 
 function circularStatus(stage: PipelineStage): "active" | "warning" | "complete" {
@@ -891,7 +898,8 @@ function RoleWorkspace() {
                   {data.maps.map(m => (
                     <div key={m.id} className="flex items-center gap-4 px-3.5 py-2.5 rounded-md border border-border hover:bg-secondary/30 transition-colors">
                       <span className="font-mono text-[10.5px] font-bold shrink-0" style={{ color: CB }}>{m.id}</span>
-                      <span className="flex-1 text-[12px] text-foreground">{m.action}</span>
+                      <span className="text-[8.5px] font-extrabold px-1.5 py-0.5 rounded shrink-0" style={{ background: `${impactColor(m.impact)}14`, color: impactColor(m.impact) }}>{m.impact}</span>
+                      <span className="flex-1 text-[12px] text-foreground">{m.summary}</span>
                       <span className="text-[10.5px] font-mono text-muted-foreground shrink-0">{dateOf(m.deadline)}</span>
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0" style={{ background: `${CB}10`, color: CB }}>{m.category}</span>
                       {m.needsReview && (

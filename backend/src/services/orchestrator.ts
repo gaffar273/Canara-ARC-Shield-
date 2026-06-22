@@ -47,7 +47,12 @@ async function runStages(circularId: string): Promise<void> {
     }
   });
 
-  const maps = await node2.generate({ circularId, clauses: intelligence.clauses });
+  const maps = await node2.generate({
+    circularId,
+    regulator: intelligence.regulator,
+    circularDate: intelligence.issuedDate,
+    clauses: intelligence.clauses,
+  });
   await ledgerService.recordMapGenerated(circularId, maps);
   await stateStore.transition(circularId, "MAPPING", (r) => {
     r.maps = maps;
