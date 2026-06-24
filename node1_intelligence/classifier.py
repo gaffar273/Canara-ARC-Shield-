@@ -151,8 +151,9 @@ def _llm_vote(text: str, domain_key: str, domain_def: Dict):
     Tier 1/Tier 2 verdict."""
     try:
         from node1_intelligence import llm
+        from node1_intelligence import config
 
-        if not llm.enabled():
+        if not llm.enabled() or not config.llm_classify():
             return None
         candidates = [
             {"domain": domain_key, "ruleType": rtype}

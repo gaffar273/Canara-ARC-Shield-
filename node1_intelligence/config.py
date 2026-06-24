@@ -52,6 +52,13 @@ def llm_refine() -> bool:
     return os.getenv("NODE1_LLM_REFINE", "false").strip().lower() in {"1", "true", "yes"}
 
 
+def llm_classify() -> bool:
+    """Whether the classification ladder's Tier 3 calls the LLM per clause. Off by
+    default: a slow reasoning model called once per clause blocks the pipeline
+    (keyword + semantic already classify well). The copilot path is unaffected."""
+    return os.getenv("NODE1_LLM_CLASSIFY", "false").strip().lower() in {"1", "true", "yes"}
+
+
 def llm_timeout() -> float:
     try:
         return float(os.getenv("NODE1_LLM_TIMEOUT", "60"))

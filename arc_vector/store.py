@@ -32,6 +32,10 @@ _BASE_DIR = os.getenv(
 # keyword overlap is a tie-breaker that rescues exact-term matches.
 _SEMANTIC_WEIGHT = 0.7
 _KEYWORD_WEIGHT = 0.3
+# Fallback dimension for placeholder vectors when the embedding model is down.
+# Must match the embedding model's output dim (nomic-embed-text = 768) so a
+# document stored during an outage doesn't clash with real vectors later.
+_EMBED_DIM = int(os.getenv("ARC_EMBED_DIM", "768"))
 _STOPWORDS = {
     "the", "and", "for", "this", "that", "with", "shall", "have", "been", "from",
     "under", "into", "such", "any", "all", "are", "may", "will", "which", "these",
@@ -75,23 +79,28 @@ class HybridVectorStore:
         path = os.path.join(_BASE_DIR, name)
         os.makedirs(path, exist_ok=True)
         self._client = chromadb.PersistentClient(path=path)
+        # embedding_function=None: we always supply embeddings ourselves (real or
+        # a placeholder). Without this, an upsert that omits embeddings makes
+        # Chroma silently apply its built-in 384-dim model, which then clashes
+        # with our 768-dim nomic vectors ("expecting dimension 768, got 384").
         self._collection = self._client.get_or_create_collection(
-            name, metadata={"hnsw:space": "cosine"}
+            name, metadata={"hnsw:space": "cosine"}, embedding_function=None
         )
 
     def upsert(self, doc_id: str, text: str, metadata: Optional[Dict] = None) -> None:
-        """Add or update one document. No-op on empty text. If embedding is
-        unavailable the document is still stored (with a keyword-only marker) so
-        it remains retrievable by the keyword half of the hybrid search."""
+        """Add or update one document. No-op on empty text. If the embedding model
+        is unavailable the document is stored with a zero placeholder vector so it
+        stays retrievable by the keyword half of the hybrid search and the
+        collection's dimension never clashes with real vectors."""
         cleaned = (text or "").strip()
         if not cleaned:
             return
         meta = {**(metadata or {}), "_text": cleaned}
         vector = embed(cleaned)
-        if vector is not None:
-            self._collection.upsert(ids=[doc_id], embeddings=[vector], documents=[cleaned], metadatas=[meta])
-        else:
-            self._collection.upsert(ids=[doc_id], documents=[cleaned], metadatas=[meta])
+        if vector is None:
+            meta["_no_embedding"] = True
+            vector = [0.0] * _EMBED_DIM
+        self._collection.upsert(ids=[doc_id], embeddings=[vector], documents=[cleaned], metadatas=[meta])
 
     def count(self) -> int:
         return self._collection.count()
