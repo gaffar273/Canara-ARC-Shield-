@@ -1,5 +1,5 @@
 import { config } from "../config/index.js";
-import type { Circular, PipelineRecord, PipelineStage } from "../types/domain.js";
+import type { Circular, ComplianceMap, MapDecision, PipelineRecord, PipelineStage } from "../types/domain.js";
 import { Mutex } from "../utils/mutex.js";
 import { fail } from "../utils/errors.js";
 import { readJsonFile, writeJsonFileAtomic } from "./persistence.js";
@@ -136,6 +136,32 @@ class StateStore {
       this.indexCircular(circular);
       await this.persist();
       return record;
+    });
+  }
+
+  /**
+   * Records a human reviewer's decision on one MAP. Runs inside the mutex so it
+   * cannot interleave with a pipeline transition writing the same record.
+   */
+  async decideMap(
+    circularId: string,
+    mapId: string,
+    decision: MapDecision,
+  ): Promise<ComplianceMap> {
+    return this.lock.run(async () => {
+      await this.load();
+      const record = this.cache.pipelines[circularId];
+      if (!record) throw fail("NOT_FOUND", `Unknown circular ${circularId}`);
+      const map = record.maps.find((m) => m.id === mapId);
+      if (!map) throw fail("NOT_FOUND", `Unknown MAP ${mapId} on ${circularId}`);
+      map.decision = decision;
+      map.needsReview = false;
+      if (decision.status === "REASSIGNED" && decision.reassignedTo) {
+        map.owner = decision.reassignedTo;
+      }
+      record.updatedAt = new Date().toISOString();
+      await this.persist();
+      return map;
     });
   }
 

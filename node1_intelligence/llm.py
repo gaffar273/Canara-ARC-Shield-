@@ -134,7 +134,7 @@ async def refine(title: str, clauses: List[Dict]) -> Optional[Dict]:
     The digest is kept small (12 clauses, 240 chars each) so the prompt fits
     inside Ollama's default 4K context window with room for the response.
     """
-    if not enabled() or not clauses:
+    if not enabled() or not config.llm_refine() or not clauses:
         return None
     digest = [{"id": c["id"], "text": c["text"][:240]} for c in clauses[:12]]
     prompt = (

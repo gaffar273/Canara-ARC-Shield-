@@ -1,0 +1,57 @@
+{
+  "systems": {
+    "Information Security": {
+      "system": "IAM-Platform-Prod",
+      "parameters": {
+        "mfa_enabled": true,
+        "mfa_coverage_percent": 100,
+        "password_rotation_days": 90,
+        "session_timeout_minutes": 15,
+        "encryption_at_rest": "AES-256",
+        "privileged_access_approval": true
+      }
+    },
+    "Technology": {
+      "system": "Core-Banking-DB",
+      "parameters": {
+        "call_recording_retention_years": 3,
+        "log_retention_years": 5,
+        "system_availability_percent": 99.95,
+        "patch_sla_days": 12
+      }
+    },
+    "Compliance": {
+      "system": "KYC-AML-Engine",
+      "parameters": {
+        "kyc_periodic_update_years": 2,
+        "edd_for_high_risk": true,
+        "transaction_monitoring_enabled": true,
+        "str_filing_days": 7,
+        "kyc_record_retention_years": 10
+      }
+    },
+    "Treasury": {
+      "system": "Capital-Adequacy-Monitor",
+      "parameters": {
+        "capital_adequacy_ratio_percent": 11.8,
+        "minimum_capital_inr": 6000000,
+        "liquidity_coverage_ratio_percent": 105
+      }
+    },
+    "Risk Management": {
+      "system": "Risk-GRC-Platform",
+      "parameters": {
+        "revised_risk_weight_model_active": false,
+        "single_borrower_exposure_limit_percent": 15,
+        "stress_testing_frequency_per_year": 4
+      }
+    },
+    "Information Security - Incident": {
+      "system": "SIEM-Incident-Desk",
+      "parameters": {
+        "incident_report_sla_hours": 6,
+        "breach_disclosure_enabled": true
+      }
+    }
+  }
+}

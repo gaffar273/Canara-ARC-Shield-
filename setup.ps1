@@ -36,16 +36,21 @@ if ($missing.Count -gt 0) {
 Step "2/5  Installing dependencies (this can take a few minutes)"
 Push-Location "$root\backend";  npm install --no-fund --no-audit; Pop-Location; Ok "backend npm packages"
 Push-Location "$root\frontend"; npm install --no-fund --no-audit; Pop-Location; Ok "frontend npm packages"
-python -m pip install --quiet fastapi "uvicorn[standard]" pydantic pydantic-settings httpx
-Ok "python packages for the 3 nodes"
+python -m pip install --quiet fastapi "uvicorn[standard]" pydantic pydantic-settings httpx chromadb
+Ok "python packages for the 3 nodes (incl. chromadb for Node 1's semantic tier)"
 
-# ---- 3. LLM model ----------------------------------------------------------
-Step "3/5  Pulling the Node 1 LLM model (deepseek-r1:8b, ~5GB)"
+# ---- 3. Ollama models ------------------------------------------------------
+Step "3/5  Pulling Node 1 Ollama models (embeddings + LLM)"
 if (Have "ollama") {
-  $have = (ollama list) -match "deepseek-r1:8b"
-  if ($have) { Ok "deepseek-r1:8b already present" }
-  else { ollama pull deepseek-r1:8b; Ok "deepseek-r1:8b pulled" }
-} else { Warn "ollama missing - skipping. Node 1 will run rule-based only." }
+  $models = @(
+    @{ name = "nomic-embed-text"; note = "embeddings for the semantic tier, ~274MB" },
+    @{ name = "deepseek-r1:8b";   note = "LLM tier, ~5GB" }
+  )
+  foreach ($m in $models) {
+    if ((ollama list) -match [regex]::Escape($m.name)) { Ok "$($m.name) already present" }
+    else { Write-Host "  pulling $($m.name) ($($m.note))..." -ForegroundColor Gray; ollama pull $m.name; Ok "$($m.name) pulled" }
+  }
+} else { Warn "ollama missing - skipping. Node 1 will run keyword-only (no semantic/LLM tiers)." }
 
 # ---- 4. backend/.env (with real per-machine Fabric paths) ------------------
 Step "4/5  Writing backend/.env"

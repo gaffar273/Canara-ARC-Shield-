@@ -1,0 +1,6 @@
+# Shell scripts must stay LF even on Windows checkouts — WSL/bash chokes on CRLF
+# (`set -o pipefail\r` => "invalid option name"). Force LF for these.
+*.sh text eol=lf
+
+# Let Git auto-detect text vs binary for everything else.
+* text=auto

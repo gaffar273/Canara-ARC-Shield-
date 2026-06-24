@@ -125,12 +125,14 @@ header (`compliance` | `it` | `cxo` | `auditor`).
 | GET  | `/api/circulars` | any role | List all circulars |
 | GET  | `/api/circulars/:id` | any role | One circular by id |
 | POST | `/api/circulars/:id/process` | compliance | Kick off async pipeline; returns `{ started }` (202) |
+| POST | `/api/circulars/:id/maps/:mapId/decision` | compliance | Human review decision (APPROVED/REJECTED/REASSIGNED + note); sealed on-chain as `HUMAN_DECISION`, returns updated MAP |
 | GET  | `/api/circulars/:id/pipeline` | any role | Pipeline record (stage, maps, verifications, receipt) |
 | GET  | `/api/circulars/:id/references` | any role | Reference graph: own ref, cited refs (resolved/dangling), and back-edges (`citedBy`) |
 | GET  | `/api/dashboard/summary` | any role | Aggregated executive metrics (cached, TTL) |
 | GET  | `/api/dashboard/role/:role` | any role | MAPs + verifications scoped to a role's workspace |
 | GET  | `/api/ledger/chain` | any role | Full hash-linked ledger |
 | GET  | `/api/ledger/verify` | any role | Chain integrity check `{ valid, brokenAt }` |
+| GET  | `/api/ledger/network` | any role | Live trust-layer topology: active backend (`fabric`/`hash-chain`) + Fabric MSP/channel/chaincode/peer |
 | GET  | `/api/ledger/custody/:refId` | any role | Chain of custody for one circular |
 | POST | `/api/copilot/ask` | any role | RAG-style answer with citations + verification status |
 

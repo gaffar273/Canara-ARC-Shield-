@@ -10,6 +10,7 @@ backend/src/types/domain.ts. No clause field leaks the engine's internals.
 Run:  uvicorn node1_intelligence.api:app --port 8001
 """
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import List, Optional
@@ -25,8 +26,12 @@ logger = logging.getLogger("node1.api")
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    await llm.warmup()
+    # Warm the LLM in the background so Node 1 accepts requests immediately. The
+    # model is only needed for the copilot path; classification + clause
+    # extraction are LLM-free, so startup must not block on a ~70s cold load.
+    task = asyncio.create_task(llm.warmup())
     yield
+    task.cancel()
 
 
 app = FastAPI(title="Node 1 — Regulatory Intelligence", version="1.0.0", lifespan=lifespan)

@@ -1,0 +1,194 @@
+{
+  "checks": [
+    {
+      "check_id": "CHK-RETENTION-CALLREC",
+      "keywords": ["call recording", "recording retention", "retain", "retention", "call log"],
+      "department": "Technology",
+      "parameter": "call_recording_retention_years",
+      "operator": ">=",
+      "requiredValue": 3,
+      "unit": "years",
+      "description": "Call-recording retention must meet the mandated minimum."
+    },
+    {
+      "check_id": "CHK-RETENTION-LOG",
+      "keywords": ["log retention", "audit log", "logs retained", "system logs"],
+      "department": "Technology",
+      "parameter": "log_retention_years",
+      "operator": ">=",
+      "requiredValue": 5,
+      "unit": "years",
+      "description": "System/audit log retention minimum."
+    },
+    {
+      "check_id": "CHK-MFA",
+      "keywords": ["multi-factor", "mfa", "two-factor", "2fa", "authentication"],
+      "department": "Information Security",
+      "parameter": "mfa_enabled",
+      "operator": "==",
+      "requiredValue": true,
+      "unit": "bool",
+      "description": "Multi-factor authentication must be enabled."
+    },
+    {
+      "check_id": "CHK-MFA-COVERAGE",
+      "keywords": ["mfa coverage", "all portals", "all users", "every login"],
+      "department": "Information Security",
+      "parameter": "mfa_coverage_percent",
+      "operator": ">=",
+      "requiredValue": 100,
+      "unit": "percent",
+      "description": "MFA must cover all in-scope access."
+    },
+    {
+      "check_id": "CHK-PASSWORD-ROTATION",
+      "keywords": ["password", "passphrase", "changed every", "rotation", "rotated"],
+      "department": "Information Security",
+      "parameter": "password_rotation_days",
+      "operator": "<=",
+      "requiredValue": 90,
+      "unit": "days",
+      "description": "Passwords must rotate at least every 90 days."
+    },
+    {
+      "check_id": "CHK-SESSION-TIMEOUT",
+      "keywords": ["session", "timeout", "idle", "inactivity", "re-authenticate"],
+      "department": "Information Security",
+      "parameter": "session_timeout_minutes",
+      "operator": "<=",
+      "requiredValue": 15,
+      "unit": "minutes",
+      "description": "Idle sessions must time out within the mandated window."
+    },
+    {
+      "check_id": "CHK-ENCRYPTION",
+      "keywords": ["encrypt", "encryption", "at rest", "aes"],
+      "department": "Information Security",
+      "parameter": "encryption_at_rest",
+      "operator": "==",
+      "requiredValue": "AES-256",
+      "unit": "standard",
+      "description": "Data at rest must be encrypted to the mandated standard."
+    },
+    {
+      "check_id": "CHK-KYC-PERIODIC",
+      "keywords": ["periodic", "re-kyc", "kyc update", "updated every", "refreshed"],
+      "department": "Compliance",
+      "parameter": "kyc_periodic_update_years",
+      "operator": "<=",
+      "requiredValue": 2,
+      "unit": "years",
+      "description": "KYC must be refreshed at least every 2 years."
+    },
+    {
+      "check_id": "CHK-KYC-RETENTION",
+      "keywords": ["kyc record", "kyc records", "record retention", "retain kyc"],
+      "department": "Compliance",
+      "parameter": "kyc_record_retention_years",
+      "operator": ">=",
+      "requiredValue": 10,
+      "unit": "years",
+      "description": "KYC records must be retained for the mandated minimum."
+    },
+    {
+      "check_id": "CHK-EDD",
+      "keywords": ["enhanced due diligence", "edd", "high-risk", "high risk customer", "pep"],
+      "department": "Compliance",
+      "parameter": "edd_for_high_risk",
+      "operator": "==",
+      "requiredValue": true,
+      "unit": "bool",
+      "description": "Enhanced due diligence must be active for high-risk customers."
+    },
+    {
+      "check_id": "CHK-TXN-MONITORING",
+      "keywords": ["transaction monitoring", "monitor transactions", "ongoing monitoring", "suspicious transaction"],
+      "department": "Compliance",
+      "parameter": "transaction_monitoring_enabled",
+      "operator": "==",
+      "requiredValue": true,
+      "unit": "bool",
+      "description": "Transaction monitoring must be enabled."
+    },
+    {
+      "check_id": "CHK-STR-FILING",
+      "keywords": ["str", "suspicious transaction report", "fiu", "filed within"],
+      "department": "Compliance",
+      "parameter": "str_filing_days",
+      "operator": "<=",
+      "requiredValue": 7,
+      "unit": "days",
+      "description": "STRs must be filed within the mandated window."
+    },
+    {
+      "check_id": "CHK-CAPITAL-RATIO",
+      "keywords": ["capital adequacy", "crar", "capital ratio", "tier 1", "adequacy ratio"],
+      "department": "Treasury",
+      "parameter": "capital_adequacy_ratio_percent",
+      "operator": ">=",
+      "requiredValue": 11.5,
+      "unit": "percent",
+      "description": "Capital adequacy ratio must stay above the regulatory floor."
+    },
+    {
+      "check_id": "CHK-MIN-CAPITAL",
+      "keywords": ["minimum capital", "maintain capital", "capital of", "capital floor"],
+      "department": "Treasury",
+      "parameter": "minimum_capital_inr",
+      "operator": ">=",
+      "requiredValue": 5000000,
+      "unit": "inr",
+      "description": "Minimum capital must meet the mandated floor."
+    },
+    {
+      "check_id": "CHK-LCR",
+      "keywords": ["lcr", "liquidity coverage", "net cash outflow"],
+      "department": "Treasury",
+      "parameter": "liquidity_coverage_ratio_percent",
+      "operator": ">=",
+      "requiredValue": 100,
+      "unit": "percent",
+      "description": "Liquidity coverage ratio must stay at or above 100%."
+    },
+    {
+      "check_id": "CHK-RISK-WEIGHT",
+      "keywords": ["risk weight", "risk-weighted", "rwa", "revised risk", "risk weight model"],
+      "department": "Risk Management",
+      "parameter": "revised_risk_weight_model_active",
+      "operator": "==",
+      "requiredValue": true,
+      "unit": "bool",
+      "description": "The revised risk-weight model must be live in production."
+    },
+    {
+      "check_id": "CHK-EXPOSURE-LIMIT",
+      "keywords": ["exposure", "single borrower", "concentration", "exposure limit"],
+      "department": "Risk Management",
+      "parameter": "single_borrower_exposure_limit_percent",
+      "operator": "<=",
+      "requiredValue": 15,
+      "unit": "percent",
+      "description": "Single-borrower exposure must stay within the prescribed cap."
+    },
+    {
+      "check_id": "CHK-STRESS-TEST",
+      "keywords": ["stress test", "stress testing", "adverse scenario"],
+      "department": "Risk Management",
+      "parameter": "stress_testing_frequency_per_year",
+      "operator": ">=",
+      "requiredValue": 4,
+      "unit": "per_year",
+      "description": "Stress testing must run at least quarterly."
+    },
+    {
+      "check_id": "CHK-INCIDENT-SLA",
+      "keywords": ["incident", "cyber incident", "report within", "within hours", "notify the regulator"],
+      "department": "Information Security - Incident",
+      "parameter": "incident_report_sla_hours",
+      "operator": "<=",
+      "requiredValue": 6,
+      "unit": "hours",
+      "description": "Cyber incidents must be reported within the mandated SLA."
+    }
+  ]
+}

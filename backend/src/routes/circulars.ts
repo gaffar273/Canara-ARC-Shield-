@@ -5,9 +5,13 @@ import { requireRole } from "../middleware/auth.js";
 import { uploadSingle } from "../middleware/upload.js";
 import { intakeService } from "../services/intakeService.js";
 import { orchestrator } from "../services/orchestrator.js";
+import { reviewService } from "../services/reviewService.js";
 import { stateStore } from "../store/stateStore.js";
+import type { DecisionStatus, Role } from "../types/domain.js";
 
 export const circularsRouter = Router();
+
+const DECISION_STATUSES: DecisionStatus[] = ["APPROVED", "REJECTED", "REASSIGNED"];
 
 circularsRouter.post(
   "/",
@@ -62,5 +66,33 @@ circularsRouter.get(
   "/:id/pipeline",
   asyncHandler(async (req, res) => {
     sendOk(res, await orchestrator.status(param(req, "id")));
+  }),
+);
+
+circularsRouter.post(
+  "/:id/maps/:mapId/decision",
+  requireRole("compliance"),
+  asyncHandler(async (req, res) => {
+    const circularId = param(req, "id");
+    const mapId = param(req, "mapId");
+    const body = (req.body ?? {}) as {
+      status?: unknown;
+      note?: unknown;
+      reassignedTo?: unknown;
+    };
+    const status = body.status as DecisionStatus;
+    if (!DECISION_STATUSES.includes(status)) {
+      throw fail("BAD_REQUEST", `status must be one of ${DECISION_STATUSES.join(", ")}`);
+    }
+    const note = typeof body.note === "string" ? body.note.trim() : "";
+    if (!note) throw fail("BAD_REQUEST", "A decision note is required");
+
+    const map = await reviewService.decide(circularId, mapId, {
+      status,
+      note,
+      decidedBy: req.role as Role,
+      reassignedTo: (body.reassignedTo as Role | undefined) ?? null,
+    });
+    sendOk(res, map);
   }),
 );

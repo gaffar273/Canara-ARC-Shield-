@@ -41,6 +41,15 @@ const NAV = [
 
 const SC = { compliant: OK, warning: WN, violation: ER };
 
+const KIND_LABEL: Record<LedgerKind, string> = {
+  CIRCULAR_RECEIVED: "Circular Received",
+  MAP_GENERATED: "MAP Generated",
+  VERIFICATION_EXECUTED: "Verification Executed",
+  EVIDENCE_COLLECTED: "Evidence Collected",
+  AUDIT_RECEIPT: "Audit Receipt Issued",
+  HUMAN_DECISION: "Human Decision Recorded",
+};
+
 function shortHash(h: string): string {
   if (!h) return "—";
   const body = h.startsWith("0x") ? h.slice(2) : h;
@@ -283,7 +292,17 @@ function ComplianceGalaxy({ sections, centerScore }: { sections: SectionScore[];
 /* ─── EXECUTIVE DASHBOARD ──────────────────────────────────────────────── */
 
 function ExecutiveDashboard() {
-  const { data, loading, error, reload } = useApi(() => api.getDashboardSummary(), []);
+  const { data, loading, error, reload } = useApi(() => api.getDashboardSummary(), [], {
+    pollMs: 4000,
+    pollWhile: (d) => {
+      if (!d) return true;
+      const active = (d.pipelineStages["RECEIVED"] ?? 0) + (d.pipelineStages["CLASSIFYING"] ?? 0)
+        + (d.pipelineStages["MAPPING"] ?? 0) + (d.pipelineStages["VERIFYING"] ?? 0)
+        + (d.pipelineStages["SEALED"] ?? 0);
+      return active > 0;
+    },
+  });
+  const chain = useApi(() => api.getChain(), []);
 
   return (
     <div className="flex flex-col h-full overflow-auto">
@@ -352,10 +371,33 @@ function ExecutiveDashboard() {
             </div>
 
             <div className="bg-white border border-border rounded-lg p-5">
-              <h3 className="text-sm font-bold mb-3" style={{ fontFamily: "Barlow, sans-serif", color: "#0a1628" }}>
-                Audit Status Timeline
-              </h3>
-              <Placeholder title="Audit timeline coming soon" sub="Scheduled-audit tracking isn’t served by this service yet." />
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold" style={{ fontFamily: "Barlow, sans-serif", color: "#0a1628" }}>
+                  Audit Status Timeline
+                </h3>
+                {chain.data && chain.data.length > 0 && (
+                  <span className="text-[10px] text-muted-foreground font-mono">{chain.data.length} sealed events</span>
+                )}
+              </div>
+              {chain.loading ? <Loading label="Loading ledger…" />
+                : chain.error ? <ErrorState message={chain.error} onRetry={chain.reload} />
+                : !chain.data || chain.data.length === 0
+                  ? <EmptyState title="No audit events yet" sub="Every pipeline stage seals a block here once a circular is processed." />
+                  : (
+                    <div className="space-y-2.5">
+                      {[...chain.data].slice(-6).reverse().map(b => (
+                        <div key={b.index} className="flex items-center gap-3 text-[11.5px]">
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: OK }} />
+                          <span className="font-semibold text-foreground w-44 shrink-0" style={{ fontFamily: "Inter" }}>
+                            {KIND_LABEL[b.kind] ?? b.kind}
+                          </span>
+                          <span className="font-mono text-[10px] shrink-0" style={{ color: CB }}>{shortHash(b.hash)}</span>
+                          <span className="text-muted-foreground truncate flex-1">{b.refId}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono shrink-0">{new Date(b.timestamp).toLocaleTimeString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
             </div>
           </>
         )}
@@ -367,13 +409,20 @@ function ExecutiveDashboard() {
 /* ─── CIRCULAR EXPLORER ────────────────────────────────────────────────── */
 
 function CircularDetail({ circular }: { circular: Circular }) {
-  const pipeline = useApi(() => api.getPipeline(circular.id), [circular.id]);
+  const pipeline = useApi(() => api.getPipeline(circular.id), [circular.id], {
+    pollMs: 3000,
+    pollWhile: (p) => !p || (p.stage !== "COMPLETE" && p.stage !== "FAILED"),
+  });
   const refs = useApi(() => api.getReferences(circular.id), [circular.id]);
   const clauses = pipeline.data?.intelligence?.clauses ?? [];
   const similar = pipeline.data?.intelligence?.similarTo ?? null;
   const maps = pipeline.data?.maps ?? [];
   const verifications = pipeline.data?.verifications ?? [];
   const mapById = new Map(maps.map(m => [m.id, m]));
+  const stage = pipeline.data?.stage ?? circular.stage;
+  const inFlight = stage !== "COMPLETE" && stage !== "FAILED";
+  const STAGES: PipelineStage[] = ["RECEIVED", "CLASSIFYING", "MAPPING", "VERIFYING", "SEALED", "COMPLETE"];
+  const stageIdx = STAGES.indexOf(stage);
 
   return (
     <div className="space-y-5 max-w-3xl">
@@ -394,6 +443,43 @@ function CircularDetail({ circular }: { circular: Circular }) {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Live pipeline progress — polls until COMPLETE/FAILED */}
+      <div className="rounded-lg border border-border bg-white p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            {inFlight
+              ? <RefreshCw size={13} className="animate-spin" style={{ color: CB }} />
+              : stage === "FAILED"
+                ? <XCircle size={13} style={{ color: ER }} />
+                : <CheckCircle size={13} style={{ color: OK }} />}
+            <h3 className="text-sm font-bold" style={{ fontFamily: "Barlow, sans-serif", color: "#0a1628" }}>
+              Pipeline {inFlight ? "running…" : stage === "FAILED" ? "failed" : "sealed"}
+            </h3>
+          </div>
+          <span className="text-[10px] font-mono text-muted-foreground">{stage}</span>
+        </div>
+        {stage === "FAILED" && pipeline.data?.error
+          ? <div className="text-[11px] text-red-600">{pipeline.data.error}</div>
+          : (
+            <div className="flex items-center gap-1">
+              {STAGES.map((s, i) => {
+                const done = stageIdx >= 0 && i <= stageIdx;
+                const current = i === stageIdx && inFlight;
+                return (
+                  <div key={s} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="w-full h-1 rounded-full transition-colors"
+                      style={{ background: done ? CB : "#e6edf6" }} />
+                    <span className="text-[8px] font-bold uppercase tracking-wide"
+                      style={{ color: current ? CB : done ? "#0a1628" : "#9aa7bd" }}>
+                      {s}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
       </div>
 
       {/* Reference graph — real today */}
@@ -775,17 +861,10 @@ function ComplianceCopilot() {
 
 /* ─── BLOCKCHAIN TRUST CENTER ──────────────────────────────────────────── */
 
-const KIND_LABEL: Record<LedgerKind, string> = {
-  CIRCULAR_RECEIVED: "Circular Received",
-  MAP_GENERATED: "MAP Generated",
-  VERIFICATION_EXECUTED: "Verification Executed",
-  EVIDENCE_COLLECTED: "Evidence Collected",
-  AUDIT_RECEIPT: "Audit Receipt Issued",
-};
-
 function BlockchainTrustCenter() {
   const chain = useApi(() => api.getChain(), []);
   const verify = useApi(() => api.verifyChain(), []);
+  const network = useApi(() => api.getLedgerNetwork(), []);
   const blocks = chain.data ?? [];
 
   const latestByKind = new Map<LedgerKind, LedgerBlock>();
@@ -867,19 +946,92 @@ function BlockchainTrustCenter() {
 
               <div className="space-y-4">
                 <div className="bg-white border border-border rounded-lg p-4">
-                  <h3 className="text-[11px] font-bold mb-3" style={{ fontFamily: "Barlow", color: "#0a1628" }}>X.509 Signatures</h3>
-                  <Placeholder title="Signers coming soon" sub="Signer attestations aren’t exposed by the ledger API yet." />
+                  <h3 className="text-[11px] font-bold mb-3" style={{ fontFamily: "Barlow", color: "#0a1628" }}>Signing Identity</h3>
+                  {network.loading ? <Loading />
+                    : !network.data ? <EmptyState title="Unavailable" sub="Ledger network info not served." />
+                    : network.data.backend === "fabric" && network.data.fabric ? (
+                      <div className="space-y-2.5">
+                        <div className="flex items-center gap-2">
+                          <Fingerprint size={13} style={{ color: CB }} />
+                          <span className="text-[11px] font-semibold text-foreground">X.509 / MSP identity</span>
+                        </div>
+                        <div className="text-[10px] space-y-1.5">
+                          <div className="flex justify-between"><span className="text-muted-foreground">MSP ID</span><span className="font-mono font-bold" style={{ color: CB }}>{network.data.fabric.mspId}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Signed by</span><span className="font-mono">{network.data.fabric.peerHostAlias}</span></div>
+                        </div>
+                        <div className="text-[9.5px] text-muted-foreground pt-1 border-t border-border">
+                          Each block is a transaction submitted under this MSP identity and committed by the orderer.
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Hash size={13} style={{ color: WN }} />
+                          <span className="text-[11px] font-semibold text-foreground">Local hash-chain</span>
+                        </div>
+                        <p className="text-[9.5px] text-muted-foreground">
+                          Running on the SHA-256 hash-chain backend (FABRIC_ENABLED=false). No X.509 signers — integrity is enforced by hash linkage.
+                        </p>
+                      </div>
+                    )}
                 </div>
                 <div className="bg-white border border-border rounded-lg p-4">
                   <h3 className="text-[11px] font-bold mb-3" style={{ fontFamily: "Barlow", color: "#0a1628" }}>Fabric Network</h3>
-                  <Placeholder title="Network view coming soon" sub="Peer/org topology isn’t served by this endpoint." />
+                  {network.loading ? <Loading />
+                    : network.data?.backend === "fabric" && network.data.fabric ? (
+                      <div className="text-[10px] space-y-1.5">
+                        <div className="flex justify-between"><span className="text-muted-foreground">Channel</span><span className="font-mono font-bold" style={{ color: CB }}>{network.data.fabric.channel}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Chaincode</span><span className="font-mono">{network.data.fabric.chaincode}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Peer</span><span className="font-mono">{network.data.fabric.peerEndpoint}</span></div>
+                        <div className="flex items-center gap-1.5 pt-1.5 mt-1 border-t border-border">
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: OK }} />
+                          <span className="text-[9.5px] font-semibold" style={{ color: "#15803d" }}>Connected</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[9.5px] text-muted-foreground">
+                        Hash-chain backend active. Set FABRIC_ENABLED=true to record on the Hyperledger Fabric network.
+                      </p>
+                    )}
                 </div>
               </div>
             </div>
 
             <div className="bg-white border border-border rounded-lg p-5">
-              <h3 className="text-sm font-bold mb-3" style={{ fontFamily: "Barlow, sans-serif", color: "#0a1628" }}>Recent Fabric Transactions</h3>
-              <Placeholder title="Transaction table coming soon" sub="Per-channel Fabric transactions aren’t exposed by this service yet." />
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold" style={{ fontFamily: "Barlow, sans-serif", color: "#0a1628" }}>
+                  {network.data?.backend === "fabric" ? "Recent Fabric Transactions" : "Recent Ledger Transactions"}
+                </h3>
+                <span className="text-[10px] text-muted-foreground font-mono">{blocks.length} total</span>
+              </div>
+              {blocks.length === 0 ? (
+                <EmptyState title="No transactions yet" sub="Each pipeline stage submits one transaction to the ledger." />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[10.5px]">
+                    <thead>
+                      <tr className="text-left text-muted-foreground uppercase tracking-wider text-[9px] border-b border-border">
+                        <th className="py-1.5 font-bold">#</th>
+                        <th className="py-1.5 font-bold">Event</th>
+                        <th className="py-1.5 font-bold">Ref</th>
+                        <th className="py-1.5 font-bold">Tx Hash</th>
+                        <th className="py-1.5 font-bold text-right">Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...blocks].reverse().slice(0, 12).map(b => (
+                        <tr key={b.index} className="border-b border-border last:border-0">
+                          <td className="py-1.5 font-mono text-muted-foreground">{b.index}</td>
+                          <td className="py-1.5 font-semibold text-foreground">{KIND_LABEL[b.kind] ?? b.kind}</td>
+                          <td className="py-1.5 font-mono text-muted-foreground">{b.refId}</td>
+                          <td className="py-1.5 font-mono" style={{ color: CB }}>{shortHash(b.hash)}</td>
+                          <td className="py-1.5 font-mono text-muted-foreground text-right">{new Date(b.timestamp).toLocaleTimeString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -964,6 +1116,91 @@ function RoleWorkspace() {
 
 /* ─── REVIEW QUEUE ──────────────────────────────────────────────────────── */
 
+function DecisionRow({ item, onDone }: { item: import("../services/types.js").ReviewQueueItem; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [reassignTo, setReassignTo] = useState<Role>("it");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = async (status: "APPROVED" | "REJECTED" | "REASSIGNED") => {
+    if (!note.trim()) { setErr("A note is required to record the decision."); return; }
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.decideMap(item.circularId, item.id, {
+        status,
+        note: note.trim(),
+        ...(status === "REASSIGNED" ? { reassignedTo: reassignTo } : {}),
+      });
+      onDone();
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-md border border-border bg-white">
+      <div className="flex items-center gap-4 px-3.5 py-2.5">
+        <span className="font-mono text-[10.5px] font-bold shrink-0" style={{ color: CB }}>{item.id}</span>
+        <span className="text-[8.5px] font-extrabold px-1.5 py-0.5 rounded shrink-0" style={{ background: `${impactColor(item.impact)}14`, color: impactColor(item.impact) }}>{item.impact}</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] text-foreground truncate">{item.summary}</div>
+          <div className="text-[10px] text-muted-foreground truncate">{item.circularTitle}</div>
+        </div>
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0" style={{ background: `${CB}10`, color: CB }}>{item.category}</span>
+        <span className="font-mono text-[10.5px] font-bold shrink-0" style={{ color: WN }}>{Math.round(item.confidence * 100)}%</span>
+        <button onClick={() => setOpen(o => !o)}
+          className="text-[10.5px] font-semibold px-3 py-1 rounded shrink-0 text-white" style={{ background: CB }}>
+          {open ? "Cancel" : "Decide"}
+        </button>
+      </div>
+
+      {open && (
+        <div className="border-t border-border p-3.5 space-y-2.5 bg-secondary/20">
+          <textarea
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="Decision rationale (recorded on-chain with your role)…"
+            rows={2}
+            className="w-full px-3 py-2 text-[12px] rounded border border-border bg-white focus:outline-none focus:ring-1"
+            style={{ fontFamily: "Inter" }}
+          />
+          {err && <div className="text-[10.5px] text-red-600">{err}</div>}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button disabled={busy} onClick={() => submit("APPROVED")}
+              className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded text-white disabled:opacity-40" style={{ background: OK }}>
+              <CheckCircle size={12} /> Approve
+            </button>
+            <button disabled={busy} onClick={() => submit("REJECTED")}
+              className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded text-white disabled:opacity-40" style={{ background: ER }}>
+              <XCircle size={12} /> Reject
+            </button>
+            <div className="flex items-center gap-1.5 ml-auto">
+              <select value={reassignTo} onChange={e => setReassignTo(e.target.value as Role)}
+                className="text-[11px] px-2 py-1.5 rounded border border-border bg-white">
+                <option value="it">IT</option>
+                <option value="compliance">Compliance</option>
+                <option value="cxo">CXO</option>
+                <option value="auditor">Auditor</option>
+              </select>
+              <button disabled={busy} onClick={() => submit("REASSIGNED")}
+                className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded border border-border text-foreground disabled:opacity-40">
+                <ArrowRight size={12} /> Reassign
+              </button>
+            </div>
+          </div>
+          <p className="text-[9.5px] text-muted-foreground">
+            Your decision is sealed on the audit chain as a HUMAN_DECISION block before it is recorded.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ReviewQueuePage() {
   const { data, loading, error, reload } = useApi(() => api.getReviewQueue(), []);
 
@@ -991,16 +1228,7 @@ function ReviewQueuePage() {
               ) : (
                 <div className="space-y-2">
                   {data.items.map(m => (
-                    <div key={m.id} className="flex items-center gap-4 px-3.5 py-2.5 rounded-md border border-border hover:bg-secondary/30 transition-colors">
-                      <span className="font-mono text-[10.5px] font-bold shrink-0" style={{ color: CB }}>{m.id}</span>
-                      <span className="text-[8.5px] font-extrabold px-1.5 py-0.5 rounded shrink-0" style={{ background: `${impactColor(m.impact)}14`, color: impactColor(m.impact) }}>{m.impact}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[12px] text-foreground truncate">{m.summary}</div>
-                        <div className="text-[10px] text-muted-foreground truncate">{m.circularTitle}</div>
-                      </div>
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0" style={{ background: `${CB}10`, color: CB }}>{m.category}</span>
-                      <span className="font-mono text-[10.5px] font-bold shrink-0" style={{ color: WN }}>{Math.round(m.confidence * 100)}%</span>
-                    </div>
+                    <DecisionRow key={m.id} item={m} onDone={reload} />
                   ))}
                 </div>
               )}

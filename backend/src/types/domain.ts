@@ -29,6 +29,17 @@ export type Impact = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export type VerificationStatus = "PASS" | "FAIL" | "REVIEW";
 
+export type DecisionStatus = "APPROVED" | "REJECTED" | "REASSIGNED";
+
+export interface MapDecision {
+  status: DecisionStatus;
+  note: string;
+  decidedBy: Role;
+  decidedAt: string;
+  reassignedTo: Role | null;
+  ledgerHash: string;
+}
+
 export interface DocumentMeta {
   filename: string;
   mimeType: string;
@@ -88,6 +99,7 @@ export interface ComplianceMap {
   category: MapCategory;
   confidence: number;
   needsReview: boolean;
+  decision: MapDecision | null;
 }
 
 export interface VerificationResult {
@@ -107,7 +119,8 @@ export interface LedgerBlock {
     | "MAP_GENERATED"
     | "VERIFICATION_EXECUTED"
     | "EVIDENCE_COLLECTED"
-    | "AUDIT_RECEIPT";
+    | "AUDIT_RECEIPT"
+    | "HUMAN_DECISION";
   refId: string;
   payloadHash: string;
   prevHash: string;
