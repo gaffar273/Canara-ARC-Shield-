@@ -39,10 +39,10 @@ For the blockchain you also need **Docker Desktop** running and **WSL2 Ubuntu** 
 
 ---
 
-## 1. Start the 3 AI nodes — 3 terminals
+## 1. Start the AI nodes + Core Systems — 4 terminals
 
-Each node prints its requests and errors to its own window. Open **three** PowerShell
-terminals. In **each**, first set the Python path, then start one node:
+Each service prints its requests and errors to its own window. Open **four** PowerShell
+terminals. In **each**, first set the Python path, then start one service:
 
 **Terminal 1 — Node 1 (Intelligence + LLM):**
 ```powershell
@@ -64,6 +64,20 @@ cd C:\hack\Canara-ARC-Shield-
 $env:PYTHONPATH = "C:\hack\Canara-ARC-Shield-"
 python -m uvicorn node3_verification_engine.api:app --port 8003 --host 127.0.0.1
 ```
+
+**Terminal 4 — Core Systems API (the bank's department systems):**
+```powershell
+cd C:\hack\Canara-ARC-Shield-
+$env:PYTHONPATH = "C:\hack\Canara-ARC-Shield-"
+python -m uvicorn core_systems.api:app --port 8004 --host 127.0.0.1
+```
+
+This service stands in for the bank's core/department systems (IAM, core-banking
+DB, GRC, etc.). Node 3 queries it over HTTP to read the **actual** operational
+state (retention years, MFA flags, capital ratios) and computes PASS/FAIL by
+comparing against each obligation's required value — there are no stored verdicts.
+Node 3 reaches it at `CORE_SYSTEMS_URL` (default `http://localhost:8004`); if it's
+down, Node 3 cannot assert compliance and every verdict degrades to REVIEW.
 
 Each should end with `Uvicorn running on http://127.0.0.1:800X`. Leave them running.
 When a circular is processed you'll see lines like `POST /analyze HTTP/1.1 200 OK` in
@@ -151,7 +165,7 @@ Open the URL it prints (**http://localhost:5173**).
 ## 5. Quick health check (any terminal)
 
 ```powershell
-4000,8001,8002,8003 | ForEach-Object {
+4000,8001,8002,8003,8004 | ForEach-Object {
   $u = if ($_ -eq 4000) { "http://localhost:4000/api/health" } else { "http://localhost:$_/health" }
   try { Invoke-RestMethod $u -TimeoutSec 4 | Out-Null; "  $_ OK" } catch { "  $_ DOWN" }
 }
@@ -191,27 +205,19 @@ do {
 (Invoke-RestMethod "$base/ledger/custody/$id" -Headers $h).data.events.kind   # 5 custody events
 ```
 
-If this reaches `COMPLETE` but the **UI** doesn't update, the problem is the frontend
-refresh (see the known issue below), not the backend.
+This proves the backend + nodes + chain work independently of the UI. The UI now
+polls, so it tracks the same stages live (see the auto-refresh note below).
 
 ---
 
-## Known issue — UI doesn't update after upload
+## UI auto-refresh after upload (resolved)
 
-**Symptom:** you upload in *Circular Explorer*, see "Starting pipeline…", then nothing
-changes.
-
-**Why:** the backend pipeline runs asynchronously and takes ~40s. The frontend loads
-the circular's status **once** right after upload (when it's still `RECEIVED`) and does
-**not** poll for updates. So the screen stays on the early stage until you manually
-re-click the circular.
-
-**Workaround right now:** click another circular and click back, or refresh the page
-after ~45s — you'll see it at `COMPLETE` with MAPs and verifications.
-
-**Proper fix (not yet applied):** add polling to the detail view so it refetches
-`/circulars/:id/pipeline` every few seconds until the stage is `COMPLETE` or `FAILED`.
-Tell me if you want this and I'll wire it in.
+The detail view and the executive dashboard now **poll** while a circular is in
+flight: they refetch `/circulars/:id/pipeline` (and `/dashboard/summary`) every few
+seconds and stop once the stage reaches `COMPLETE` or `FAILED`. After uploading you
+can stay on the circular and watch the live stage bar climb
+RECEIVED → CLASSIFYING → MAPPING → VERIFYING → SEALED → COMPLETE — no manual refresh
+needed.
 
 ---
 
@@ -245,6 +251,7 @@ $p = 4000   # or 5173, 8001, 8002, 8003
 | Node 1 Intelligence | 1 | 8001 | `python -m uvicorn node1_intelligence.api:app --port 8001` |
 | Node 2 MAP Engine | 2 | 8002 | `python -m uvicorn node2_map_engine.api:app --port 8002` |
 | Node 3 Verification | 3 | 8003 | `python -m uvicorn node3_verification_engine.api:app --port 8003` |
+| Core Systems API | 4 | 8004 | `python -m uvicorn core_systems.api:app --port 8004` |
 | Blockchain (Fabric) | WSL2 Ubuntu | 7051 | `bash fabric/scripts/start-blockchain.sh` |
-| Backend | 4 | 4000 | `npm run dev` (in `backend/`) |
-| Frontend | 5 | 5173 | `npm run dev` (in `frontend/`) |
+| Backend | 5 | 4000 | `npm run dev` (in `backend/`) |
+| Frontend | 6 | 5173 | `npm run dev` (in `frontend/`) |

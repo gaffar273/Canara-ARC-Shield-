@@ -7,11 +7,15 @@ derives the circular-level facts the backend needs: title, issued date, the set
 of regulatory sections, and a best-effort similarity to a linked prior circular.
 """
 
+import logging
+import os
 import re
 from typing import Dict, List, Optional
 
 from node1_intelligence.classifier import classify, classify_domain, detect_regulator
 from arc_vector import HybridVectorStore
+
+logger = logging.getLogger("node1.extractor")
 
 # A clause is a numbered item ("3.", "2.1", "(a)") or a sentence carrying an
 # obligation. We segment on the formers' boundaries, then fall back to sentences.
@@ -24,7 +28,9 @@ _DATE_PATTERNS = [
     re.compile(r"\b(\d{1,2}/\d{1,2}/\d{4})\b"),
 ]
 _MIN_CLAUSE_LEN = 25
-_MAX_CLAUSES = 40
+# Headroom for long master directions / booklets (100+ pages). Truncation past
+# this is logged, never silent — a dropped clause is a dropped obligation.
+_MAX_CLAUSES = int(os.getenv("NODE1_MAX_CLAUSES", "200"))
 
 
 def _segments(text: str) -> List[str]:
@@ -114,10 +120,14 @@ def best_similarity(text: str, candidates: List[Dict], circular_id: Optional[str
 def extract_clauses(text: str) -> List[Dict]:
     """Obligation-bearing clauses, classified and capped. Each maps to a Node 2 chunk."""
     clauses: List[Dict] = []
+    truncated = False
     for index, segment in enumerate(_segments(text)):
         verdict = classify(segment)
         if not verdict["obligationBearing"]:
             continue
+        if len(clauses) >= _MAX_CLAUSES:
+            truncated = True
+            break
         clauses.append(
             {
                 "id": f"CLA-{index:03d}",
@@ -131,8 +141,12 @@ def extract_clauses(text: str) -> List[Dict]:
                 "_confidence": verdict["confidence"],
             }
         )
-        if len(clauses) >= _MAX_CLAUSES:
-            break
+    if truncated:
+        logger.warning(
+            "Clause cap (%d) reached; further obligation clauses were not extracted. "
+            "Consider raising NODE1_MAX_CLAUSES for very long documents.",
+            _MAX_CLAUSES,
+        )
     return clauses
 
 

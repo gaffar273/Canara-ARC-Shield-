@@ -1,5 +1,6 @@
 import type { LedgerBlock, PipelineRecord } from "../types/domain.js";
 import { ledgerBackend } from "../store/ledger/index.js";
+import { config } from "../config/index.js";
 import { sha256, sha256Of, shortHash } from "../utils/crypto.js";
 
 export interface ChainOfCustody {
@@ -11,6 +12,17 @@ export interface ChainOfCustody {
     hash: string;
     shortHash: string;
   }[];
+}
+
+export interface LedgerNetwork {
+  backend: "fabric" | "hash-chain";
+  fabric: {
+    mspId: string;
+    channel: string;
+    chaincode: string;
+    peerEndpoint: string;
+    peerHostAlias: string;
+  } | null;
 }
 
 /**
@@ -33,6 +45,11 @@ export const ledgerService = {
 
   async recordEvidence(circularId: string, evidence: unknown): Promise<LedgerBlock> {
     return ledgerBackend.append("EVIDENCE_COLLECTED", circularId, sha256Of(evidence));
+  },
+
+  /** Seals a human reviewer's decision on a MAP into the audit chain. */
+  async recordHumanDecision(circularId: string, decision: unknown): Promise<LedgerBlock> {
+    return ledgerBackend.append("HUMAN_DECISION", circularId, sha256Of(decision));
   },
 
   /** Seals the pipeline: an audit receipt committing to all of its block hashes. */
@@ -62,5 +79,22 @@ export const ledgerService = {
 
   async verifyIntegrity(): Promise<{ valid: boolean; brokenAt: number | null }> {
     return ledgerBackend.verifyChain();
+  },
+
+  /** The live trust-layer topology, sourced from the active backend + config. */
+  network(): LedgerNetwork {
+    const onFabric = ledgerBackend.kind === "fabric";
+    return {
+      backend: ledgerBackend.kind,
+      fabric: onFabric
+        ? {
+            mspId: config.fabric.mspId,
+            channel: config.fabric.channel,
+            chaincode: config.fabric.chaincode,
+            peerEndpoint: config.fabric.peerEndpoint,
+            peerHostAlias: config.fabric.peerHostAlias,
+          }
+        : null,
+    };
   },
 };

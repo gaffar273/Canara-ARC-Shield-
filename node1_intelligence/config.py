@@ -45,6 +45,13 @@ def llm_no_think() -> bool:
     return os.getenv("NODE1_LLM_NO_THINK", "false").strip().lower() in {"1", "true", "yes"}
 
 
+def llm_refine() -> bool:
+    """Whether /analyze uses the LLM to refine titles. Off by default: title
+    refinement is cosmetic and a slow reasoning model would block the pipeline.
+    The copilot answer path uses the LLM regardless of this flag."""
+    return os.getenv("NODE1_LLM_REFINE", "false").strip().lower() in {"1", "true", "yes"}
+
+
 def llm_timeout() -> float:
     try:
         return float(os.getenv("NODE1_LLM_TIMEOUT", "60"))

@@ -47,12 +47,16 @@ async def run_map_engine(chunk: IncomingChunk) -> Node2State:
     llm = LLMEngine()
     
     try:
-        # STEP 1: Retrieval
-        old_clause = storage.find_historical_clause(chunk.domain, chunk.section_title)
+        # STEP 1: Retrieval — never match the circular against its own clauses.
+        old_clause = storage.find_historical_clause(
+            chunk.domain, chunk.section_title, exclude_circular=chunk.circular_id
+        )
         if not old_clause:
             # Fallback to Vector Search
-            old_clause = storage.vector_search_clause(chunk.chunk_text)
-            
+            old_clause = storage.vector_search_clause(
+                chunk.chunk_text, exclude_circular=chunk.circular_id
+            )
+
         if not old_clause:
             logger.info("No historical clause found. Treating as completely new addition.")
             # In a real scenario, we might skip the diffing and just treat it as ADDED
@@ -110,10 +114,25 @@ async def run_map_engine(chunk: IncomingChunk) -> Node2State:
         )
         
         state["final_map"] = final_map_obj.model_dump()
-        
+
         # STEP 7: Save to DB
         storage.save_map(state["final_map"], requires_review)
-        
+
+        # STEP 8: Persist this clause as history so future circulars (its
+        # amendments) can diff against it. Deterministic id => reprocessing the
+        # same circular overwrites rather than duplicates. This closes the loop:
+        # today's obligation becomes tomorrow's baseline.
+        storage.save_historical_clause({
+            "clause_id": f"{chunk.circular_id}::{chunk.chunk_index}",
+            "circular_id": chunk.circular_id,
+            "circular_date": chunk.circular_date,
+            "domain": chunk.domain,
+            "section_title": chunk.section_title,
+            "raw_text": chunk.chunk_text,
+            "created_at": datetime.utcnow().isoformat(),
+            "source": chunk.regulator,
+        })
+
         logger.info("--- Node 2 Pipeline Completed Successfully ---")
         return state
         

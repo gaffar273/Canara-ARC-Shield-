@@ -1,136 +1,183 @@
 """
-Node 3 — Verification Engine (offline, rule-based).
+Node 3 — Autonomous Validation Agent (programmatic, deterministic).
 
-Given the compliance MAPs produced by Node 2, this checks each one against a
-seeded controls knowledge base (controls_db.json) and emits a verdict:
+This is the agent the idea doc describes: it connects over an API to the bank's
+core/department systems (the Core Systems API, core_systems/api.py) and
+*programmatically verifies* compliance — replacing manual status check-boxes. It
+does NOT read a stored verdict; it reads the actual operational value and
+computes the verdict by comparison.
 
-  - implemented control  -> PASS    (the bank already satisfies the obligation)
-  - partial control      -> REVIEW  (control exists but is incomplete)
-  - missing control      -> FAIL    (a known gap)
-  - no matching control  -> REVIEW  (nothing to verify against; needs a human)
+For each MAP:
+  1. Match it to a check in checks_catalog.json (what to verify + how).
+  2. Query the owning department's live system for the ACTUAL parameter value.
+  3. Compare actual vs the regulator's required value using the check operator.
+       satisfied            -> PASS    (Indicator = 1; bank already compliant)
+       not satisfied        -> FAIL    (Indicator = 0; real gap, with the numbers)
+  4. No matching check, or the system can't answer -> REVIEW (human decides).
 
-Two specialised agents share this core: a Technical Compliance Agent verifies
-Category A (system/config) MAPs and biases toward system_config evidence, while
-a Policy Compliance Agent verifies Category B (document/policy) MAPs and biases
-toward policy_document / control_attestation evidence. A MAP is dispatched to an
-agent by its category, and the verdict records which agent produced it.
-
-Deterministic by design: the same MAP always yields the same verdict, so the
-audit trail holds. No LLM, no internet.
+Two agents share this core: a Technical Compliance Agent validates Category A
+(system/config) MAPs, a Policy Compliance Agent validates Category B (policy/
+document) MAPs; the verdict records which agent produced it. Deterministic by
+design: the same MAP + same system state always yields the same verdict, so the
+audit trail holds. No LLM.
 """
 
 import json
 import logging
 import os
+import urllib.error
+import urllib.parse
+import urllib.request
 from typing import Dict, Any, List, Optional, Tuple
 
 logger = logging.getLogger("node3.engine")
 
-_STATUS_VERDICT = {
-    "implemented": ("PASS", 0.94),
-    "partial": ("REVIEW", 0.6),
-    "missing": ("FAIL", 0.18),
-}
+_CATALOG_PATH = os.path.join(os.path.dirname(__file__), "checks_catalog.json")
+_SYSTEMS_URL = os.getenv("CORE_SYSTEMS_URL", "http://localhost:8004").rstrip("/")
+_SYSTEMS_TIMEOUT = float(os.getenv("CORE_SYSTEMS_TIMEOUT", "10"))
 
 
-def _tokenize(text: str) -> set:
-    return {w for w in "".join(c.lower() if c.isalnum() else " " for c in text).split() if len(w) >= 3}
+def _tokenize(text: str) -> str:
+    return " ".join("".join(c.lower() if c.isalnum() else " " for c in text).split())
 
 
-class ControlsRepository:
-    """Reads the seeded controls KB. In production this is the bank's GRC system."""
+def _compare(actual: Any, operator: str, required: Any) -> bool:
+    """Deterministic indicator: does the actual system value satisfy the rule?"""
+    try:
+        if operator == "==":
+            return actual == required
+        if operator == ">=":
+            return float(actual) >= float(required)
+        if operator == "<=":
+            return float(actual) <= float(required)
+        if operator == ">":
+            return float(actual) > float(required)
+        if operator == "<":
+            return float(actual) < float(required)
+    except (TypeError, ValueError):
+        return False
+    return False
 
-    def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or os.path.join(os.path.dirname(__file__), "controls_db.json")
-        if not os.path.exists(self.db_path):
-            logger.warning("%s not found; verifier has no controls to match against.", self.db_path)
-            self._controls: Dict[str, Any] = {}
+
+class CheckCatalog:
+    """The verification rulebook: how to validate a MAP against system state."""
+
+    def __init__(self, path: Optional[str] = None):
+        self.path = path or _CATALOG_PATH
+        if not os.path.exists(self.path):
+            logger.warning("%s not found; no checks to run.", self.path)
+            self._checks: List[Dict[str, Any]] = []
         else:
-            with open(self.db_path, "r") as f:
-                self._controls = json.load(f).get("controls", {})
+            with open(self.path, "r", encoding="utf-8") as f:
+                self._checks = json.load(f).get("checks", [])
 
-    def all(self) -> List[Dict[str, Any]]:
-        return list(self._controls.values())
+    def match(self, text: str) -> Optional[Dict[str, Any]]:
+        """The check whose keywords best match the MAP text (most hits wins)."""
+        hay = _tokenize(text)
+        best: Optional[Dict[str, Any]] = None
+        best_hits = 0
+        for check in self._checks:
+            hits = sum(1 for kw in check.get("keywords", []) if kw in hay)
+            if hits > best_hits:
+                best, best_hits = check, hits
+        return best
+
+
+class SystemsClient:
+    """Queries the Core Systems API for the live value of one parameter.
+
+    Returns the actual value, or None if the system/parameter is unreachable
+    (so the agent degrades to REVIEW rather than asserting compliance)."""
+
+    def __init__(self, base_url: Optional[str] = None):
+        self.base_url = (base_url or _SYSTEMS_URL).rstrip("/")
+
+    def actual_value(self, department: str, parameter: str) -> Tuple[Optional[Any], Optional[str]]:
+        url = f"{self.base_url}/systems/{urllib.parse.quote(department)}/{urllib.parse.quote(parameter)}"
+        try:
+            with urllib.request.urlopen(url, timeout=_SYSTEMS_TIMEOUT) as resp:
+                payload = json.loads(resp.read())
+            return payload.get("actualValue"), payload.get("system")
+        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+            logger.warning("Core Systems query failed (%s/%s): %s", department, parameter, exc)
+            return None, None
 
 
 class _BaseComplianceAgent:
-    """Shared verification core. Subclasses declare a name and the evidence kinds
-    they trust most, which breaks ties toward controls of the right shape."""
+    """Shared validation core. Subclasses set their name for the audit record."""
 
     name: str = "policy"
-    preferred_evidence_kinds: set = set()
 
-    def __init__(self, repo: Optional[ControlsRepository] = None):
-        self.repo = repo or ControlsRepository()
-
-    def _best_control(self, department: str, text: str) -> Tuple[Optional[Dict[str, Any]], int]:
-        """Pick the control with the most keyword hits; department match and this
-        agent's preferred evidence kind break ties."""
-        terms = _tokenize(text)
-        best: Optional[Dict[str, Any]] = None
-        best_score = 0
-        for control in self.repo.all():
-            hits = sum(1 for kw in control.get("keywords", []) if kw in terms)
-            if hits == 0:
-                continue
-            if department and control.get("department") == department:
-                hits += 1
-            if control.get("evidence_kind") in self.preferred_evidence_kinds:
-                hits += 1
-            if hits > best_score:
-                best, best_score = control, hits
-        return best, best_score
+    def __init__(self, catalog: Optional[CheckCatalog] = None, systems: Optional[SystemsClient] = None):
+        self.catalog = catalog or CheckCatalog()
+        self.systems = systems or SystemsClient()
 
     def verify_map(self, map_obj: Dict[str, Any], now_iso: str) -> Dict[str, Any]:
-        haystack = f"{map_obj.get('summary', '')} {map_obj.get('newObligation', '')} {map_obj.get('changeReason', '')}"
-        control, hits = self._best_control(map_obj.get("department", ""), haystack)
+        haystack = " ".join(str(map_obj.get(k, "")) for k in ("summary", "newObligation", "changeReason"))
+        check = self.catalog.match(haystack)
 
-        if not control or hits == 0:
-            status, score, evidence = "REVIEW", 0.4, [
-                {"kind": "no_control_found", "ref": "UNMATCHED", "timestamp": now_iso}
-            ]
-        else:
-            status, score = _STATUS_VERDICT.get(control["status"], ("REVIEW", 0.4))
-            evidence = [{
-                "kind": control["evidence_kind"],
-                "ref": control["evidence_ref"],
-                "timestamp": now_iso,
-            }]
+        # No check covers this obligation -> nothing to verify against; human decides.
+        if not check:
+            return {
+                "mapId": map_obj["id"],
+                "status": "REVIEW",
+                "score": 0.4,
+                "verifiedBy": self.name,
+                "evidence": [{"kind": "no_check_matched", "ref": "NO_AUTOMATED_CHECK", "timestamp": now_iso}],
+            }
 
-        # A CRITICAL/HIGH change that only PASSes on a partial match still warrants a look.
-        if status == "PASS" and map_obj.get("impact") in ("HIGH", "CRITICAL") and hits < 2:
-            status, score = "REVIEW", min(score, 0.7)
+        actual, system = self.systems.actual_value(check["department"], check["parameter"])
 
+        # System unreachable / parameter absent -> can't assert compliance; review.
+        if actual is None:
+            return {
+                "mapId": map_obj["id"],
+                "status": "REVIEW",
+                "score": 0.4,
+                "verifiedBy": self.name,
+                "evidence": [{
+                    "kind": "system_unreachable",
+                    "ref": f"{check['department']}.{check['parameter']} (no response)",
+                    "timestamp": now_iso,
+                }],
+            }
+
+        satisfied = _compare(actual, check["operator"], check["requiredValue"])
+        status = "PASS" if satisfied else "FAIL"
+        score = 0.95 if satisfied else 0.15
+        mark = "satisfied" if satisfied else "VIOLATION"
+        ref = (
+            f"{system or check['department']} :: {check['parameter']} = {actual} "
+            f"(required {check['operator']} {check['requiredValue']} {check.get('unit','')}) -> {mark}"
+        )
         return {
             "mapId": map_obj["id"],
             "status": status,
-            "score": round(score, 2),
+            "score": score,
             "verifiedBy": self.name,
-            "evidence": evidence,
+            "evidence": [{"kind": "system_query", "ref": ref.strip(), "timestamp": now_iso}],
         }
 
 
 class TechnicalComplianceAgent(_BaseComplianceAgent):
-    """Verifies Category A MAPs (system / configuration changes)."""
-
+    """Validates Category A MAPs (system / configuration changes)."""
     name = "technical"
-    preferred_evidence_kinds = {"system_config"}
 
 
 class PolicyComplianceAgent(_BaseComplianceAgent):
-    """Verifies Category B MAPs (policy / document changes)."""
-
+    """Validates Category B MAPs (policy / document changes)."""
     name = "policy"
-    preferred_evidence_kinds = {"policy_document", "control_attestation"}
 
 
 class VerificationEngine:
-    """Dispatches each MAP to the agent that owns its category."""
+    """Dispatches each MAP to the agent that owns its category, then validates
+    against the live Core Systems state."""
 
-    def __init__(self, repo: Optional[ControlsRepository] = None):
-        repo = repo or ControlsRepository()
-        self.technical = TechnicalComplianceAgent(repo)
-        self.policy = PolicyComplianceAgent(repo)
+    def __init__(self, catalog: Optional[CheckCatalog] = None, systems: Optional[SystemsClient] = None):
+        catalog = catalog or CheckCatalog()
+        systems = systems or SystemsClient()
+        self.technical = TechnicalComplianceAgent(catalog, systems)
+        self.policy = PolicyComplianceAgent(catalog, systems)
 
     def _agent_for(self, category: Optional[str]) -> _BaseComplianceAgent:
         return self.technical if (category or "").strip().lower() == "technical" else self.policy

@@ -64,38 +64,72 @@ class StorageInterface:
         with open(self.db_path, "w") as f:
             json.dump(data, f, indent=2)
 
-    def find_historical_clause(self, domain: str, section_title: str) -> Optional[Dict[str, Any]]:
+    def find_historical_clause(
+        self, domain: str, section_title: str, exclude_circular: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
         """
         Attempts to find the old clause using exact metadata match (Postgres).
+        Skips clauses from `exclude_circular` so a circular never diffs against
+        its own previously-stored clauses (which would happen on reprocessing).
         """
         logger.info(f"Querying Mock DB for Domain: {domain}, Section: {section_title}")
         db = self._load_db()
 
         for clause in db.get("clauses", {}).values():
+            if exclude_circular and clause.get("circular_id") == exclude_circular:
+                continue
             if clause["domain"] == domain and clause["section_title"] == section_title:
                 logger.info("Found historical clause via metadata match.")
                 return clause
 
         return None
 
-    def vector_search_clause(self, text: str) -> Optional[Dict[str, Any]]:
+    def vector_search_clause(
+        self, text: str, exclude_circular: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
         """
         Fallback: when the exact metadata match misses, find the prior version of
         this clause by Hybrid Search (semantic embedding + keyword overlap) over
-        the indexed historical clauses. Returns the full clause record or None.
+        the indexed historical clauses. Skips same-circular matches and returns
+        the best clause at/above the match threshold, or None.
         """
         logger.info("Metadata match failed. Running hybrid vector search over historical clauses.")
-        hit = self._store().best(text, threshold=_CLAUSE_MATCH_THRESHOLD)
-        if not hit:
-            logger.info("Vector search yielded no high-confidence results.")
-            return None
-        clause = self._load_db().get("clauses", {}).get(hit.id)
-        if clause:
-            logger.info(
-                "Vector match: %s (score=%.3f semantic=%.3f keyword=%.3f)",
-                hit.id, hit.score, hit.semantic, hit.keyword,
-            )
-        return clause
+        clauses = self._load_db().get("clauses", {})
+        for hit in self._store().search(text, top_k=10):
+            if hit.score < _CLAUSE_MATCH_THRESHOLD:
+                break  # hits are sorted best-first; nothing below clears the bar
+            if exclude_circular and hit.metadata.get("circular_id") == exclude_circular:
+                continue
+            clause = clauses.get(hit.id)
+            if clause:
+                logger.info(
+                    "Vector match: %s (score=%.3f semantic=%.3f keyword=%.3f)",
+                    hit.id, hit.score, hit.semantic, hit.keyword,
+                )
+                return clause
+        logger.info("Vector search yielded no high-confidence results.")
+        return None
+
+    def save_historical_clause(self, clause_record: Dict[str, Any]) -> None:
+        """Persist a processed clause into the historical store + vector index so
+        future circulars can diff against it. This closes the ingestion loop: a
+        circular's obligations become the baseline its amendments are compared to.
+        The clause_id is deterministic per (circular, chunk) so reprocessing the
+        same circular overwrites rather than duplicates."""
+        db = self._load_db()
+        clauses = db.setdefault("clauses", {})
+        clauses[clause_record["clause_id"]] = clause_record
+        self._save_db(db)
+        self._store().upsert(
+            clause_record["clause_id"],
+            clause_record.get("raw_text", ""),
+            {
+                "domain": clause_record.get("domain", ""),
+                "section_title": clause_record.get("section_title", ""),
+                "circular_id": clause_record.get("circular_id", ""),
+            },
+        )
+        logger.info("Stored historical clause %s for future diffing.", clause_record["clause_id"])
 
 
     def save_map(self, map_data: Dict[str, Any], requires_review: bool):

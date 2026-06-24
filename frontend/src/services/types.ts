@@ -12,6 +12,17 @@ export type ChangeType = "ADDED" | "MODIFIED" | "DELETED";
 export type Impact = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type VerificationStatus = "PASS" | "FAIL" | "REVIEW";
 
+export type DecisionStatus = "APPROVED" | "REJECTED" | "REASSIGNED";
+
+export interface MapDecision {
+  status: DecisionStatus;
+  note: string;
+  decidedBy: Role;
+  decidedAt: string;
+  reassignedTo: Role | null;
+  ledgerHash: string;
+}
+
 export interface DocumentMeta {
   filename: string;
   mimeType: string;
@@ -69,6 +80,7 @@ export interface ComplianceMap {
   category: MapCategory;
   confidence: number;
   needsReview: boolean;
+  decision: MapDecision | null;
 }
 
 export interface VerificationResult {
@@ -96,7 +108,8 @@ export type LedgerKind =
   | "MAP_GENERATED"
   | "VERIFICATION_EXECUTED"
   | "EVIDENCE_COLLECTED"
-  | "AUDIT_RECEIPT";
+  | "AUDIT_RECEIPT"
+  | "HUMAN_DECISION";
 
 export interface LedgerBlock {
   index: number;
@@ -111,6 +124,17 @@ export interface LedgerBlock {
 export interface ChainVerification {
   valid: boolean;
   brokenAt: number | null;
+}
+
+export interface LedgerNetwork {
+  backend: "fabric" | "hash-chain";
+  fabric: {
+    mspId: string;
+    channel: string;
+    chaincode: string;
+    peerEndpoint: string;
+    peerHostAlias: string;
+  } | null;
 }
 
 export interface ReferenceEdge {

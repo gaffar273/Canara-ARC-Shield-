@@ -83,7 +83,7 @@ async function runStages(circularId: string): Promise<void> {
   log(circularId, `MAPPING done: ${maps.length} MAP(s)`);
   await ledgerService.recordMapGenerated(circularId, maps);
   await stateStore.transition(circularId, "MAPPING", (r) => {
-    r.maps = maps;
+    r.maps = maps.map((m) => ({ ...m, decision: m.decision ?? null }));
   });
 
   log(circularId, "VERIFYING -> Node 3 (verification)...");

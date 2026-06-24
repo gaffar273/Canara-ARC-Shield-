@@ -19,6 +19,13 @@ ledgerRouter.get(
 );
 
 ledgerRouter.get(
+  "/network",
+  asyncHandler(async (_req, res) => {
+    sendOk(res, ledgerService.network());
+  }),
+);
+
+ledgerRouter.get(
   "/custody/:refId",
   asyncHandler(async (req, res) => {
     sendOk(res, await ledgerService.chainOfCustody(param(req, "refId")));

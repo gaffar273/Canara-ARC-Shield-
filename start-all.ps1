@@ -34,12 +34,13 @@ function Start-Window($title, $command) {
 
 Write-Host "Canara ARC Shield launcher  (repo: $root)" -ForegroundColor White
 
-# ---- 1. The 3 AI nodes -----------------------------------------------------
-Step "1/4  Starting the 3 AI nodes (8001/8002/8003)"
+# ---- 1. The AI nodes + core systems ----------------------------------------
+Step "1/4  Starting the AI nodes + Core Systems API (8001/8002/8003/8004)"
 $nodes = @(
   @{ t = "Node1-Intelligence"; mod = "node1_intelligence.api:app";        port = 8001 },
   @{ t = "Node2-MAP-Engine";   mod = "node2_map_engine.api:app";          port = 8002 },
-  @{ t = "Node3-Verification"; mod = "node3_verification_engine.api:app"; port = 8003 }
+  @{ t = "Node3-Verification"; mod = "node3_verification_engine.api:app"; port = 8003 },
+  @{ t = "Core-Systems-API";   mod = "core_systems.api:app";              port = 8004 }
 )
 foreach ($n in $nodes) {
   $cmd = "cd '$root'; `$env:PYTHONPATH = '$root'; " +
