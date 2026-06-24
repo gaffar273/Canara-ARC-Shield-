@@ -1,192 +1,128 @@
 {
   "clauses": {
-    "capital_req_001": {
-      "clause_id": "capital_req_001",
-      "circular_id": "RBI/2023-24/10",
-      "circular_date": "2023-10-15",
-      "domain": "Risk",
-      "section_title": "Capital Requirements",
-      "raw_text": "Banks must maintain a minimum capital of 1,500,000 INR.",
-      "created_at": "2023-10-15",
-      "source": "RBI Advisory"
+    "CIR-790e24091f3b::0": {
+      "clause_id": "CIR-790e24091f3b::0",
+      "circular_id": "CIR-790e24091f3b",
+      "circular_date": "June 24, 2026",
+      "domain": "IT Risk",
+      "section_title": "IT & Technology Risk - Change Management",
+      "raw_text": "\ufffd\u0935\u0926\u0947\u0936\u0940 \u092e \u0941 \u0926\u094d\u0930\u093e \ufffd\u0935\u092d\u093e\u0917, \u0915 \u0947\u0902 \u0926\u094d\u0930\ufffd\u092f \u0915\u093e\u092f\u093e\u0930\u094d\u0932\u092f, \u0915 \u0947\u0902 \u0926\u094d\u0930\ufffd\u092f \u0915\u093e\u092f\u093e\u0930\u094d\u0932\u092f \u092d\u0935\u0928, \u0936\u0939\ufffd\u0926 \u092d\u0917\u0924 \ufffd\u0938\u0902\u0939 \u092e\u093e\u0917\u0930\u094d, \u092b\u094b\u091f\u0930\u094d, \u092e \u0941 \u0902\u092c\u0908-400 001, \u092d\u093e\u0930\u0924 Foreign Exchange Department, Central Office ,Central Office Building., Shahid Bhagat Singh Road, Fort, Mumbai-400 001, India \u091f\u0947\u0932\ufffd\u092b\u094b\u0928/Tel. No.022-22601000 \u092b\u0948 \u0915\u094d\u0938/Fax No. 022- 22665330 \u0905\u092e\u0930 \u092d\u0935\u0928 \u092b\u094b\u0928 022-22603000 \u092b\u0948 \u0915\u094d\u0938 22694935, \u0908\u092e\u0947\u0932: helpfed@rbi.org.in \ufffd\u0939\u0902\u0926\ufffd \u092e \u0947\u0902 \u0915\u093e\u092e \u0915\u0930\u0928\u093e \u0906\u0938\u093e\u0928 \u0939\u0948, \u0907\u0938\u0915\u093e \u092a\u094d\u0930\u092f\u094b\u0917 \u092c\u095d\u093e\u0907\u090f \u0964 RBI/2026-27/174 A.P. (DIR Series) Circular No.17 June 24, 2026 To All Authorised Persons Madam / Sir, Modification of Returns / Reporting requirements under FEMA, 1999 Attention of Authorised Persons is invited to the provisions contained in the Foreign Exchange Management (Authorised Persons) Regulations, 2026, Master Direction \u2013 Money Changing Activities, Master Direction \u2013 Money Transfer Service Scheme (MTSS), and Master Direction \u2013 Reporting under Foreign Exchange Management Act, 1999, as amended from time to time.",
+      "created_at": "2026-06-24T16:31:48.978753",
+      "source": "RBI"
     },
-    "kyc_process_001": {
-      "clause_id": "kyc_process_001",
-      "circular_id": "RBI/2023-24/15",
-      "circular_date": "2023-12-01",
-      "domain": "Compliance",
-      "section_title": "KYC Requirements",
-      "raw_text": "Customer due diligence shall be completed within 30 days of account opening.",
-      "created_at": "2023-12-01",
-      "source": "RBI Advisory"
+    "CIR-790e24091f3b::1": {
+      "clause_id": "CIR-790e24091f3b::1",
+      "circular_id": "CIR-790e24091f3b",
+      "circular_date": "June 24, 2026",
+      "domain": "IT Risk",
+      "section_title": "IT & Technology Risk - Change Management",
+      "raw_text": "On a review, it has been decided to rationalise certain reporting requirements, and prescribe/modify reporting formats pursuant to the Foreign Exchange Management (Authorised Persons) Regulations, 2026.",
+      "created_at": "2026-06-24T16:32:32.429810",
+      "source": "RBI"
     },
-    "aml_threshold_001": {
-      "clause_id": "aml_threshold_001",
-      "circular_id": "RBI/2024-01/05",
-      "circular_date": "2024-01-10",
-      "domain": "Compliance",
-      "section_title": "AML Transaction Reporting",
-      "raw_text": "Suspicious transactions exceeding 1,00,000 INR must be reported within 24 hours.",
-      "created_at": "2024-01-10",
-      "source": "RBI Advisory"
+    "CIR-790e24091f3b::2": {
+      "clause_id": "CIR-790e24091f3b::2",
+      "circular_id": "CIR-790e24091f3b",
+      "circular_date": "June 24, 2026",
+      "domain": "Other",
+      "section_title": "Regulatory Reporting - Periodic Return",
+      "raw_text": "The formats for submission of various returns are provided in the Annex to this circular. The following additional instructions shall apply: i) The revised format of FLM-8 shall also capture details relating to write-off of foreign currency notes. The requirement of obtaining prior approval of the Reserve Bank for write-off of foreign currency notes exceeding USD 2000 has been discontinued. Entities maintaining Nostro accounts and reporting the relevant transactions through FETERS shall not submit FLM-8 returns. ii) Authorised Persons having franchisee arrangements shall submit a list of such arrangements within 15 days from the end of each calendar quarter. iii) Indian Agents under MTSS shall submit the list of Sub-Agents on a quarterly basis within 15 days from the end of each calendar quarter.",
+      "created_at": "2026-06-24T16:32:50.660966",
+      "source": "RBI"
     },
-    "cybersecurity_001": {
-      "clause_id": "cybersecurity_001",
-      "circular_id": "RBI/2024-02/08",
-      "circular_date": "2024-02-15",
-      "domain": "Information Security",
-      "section_title": "Cybersecurity Standards",
-      "raw_text": "All financial institutions must implement multi-factor authentication (MFA) for customer-facing portals.",
-      "created_at": "2024-02-15",
-      "source": "RBI Advisory"
+    "CIR-790e24091f3b::3": {
+      "clause_id": "CIR-790e24091f3b::3",
+      "circular_id": "CIR-790e24091f3b",
+      "circular_date": "June 24, 2026",
+      "domain": "IT Risk",
+      "section_title": "Business Continuity - Recovery Point Objective",
+      "raw_text": "The following instructions / returns / forms stand discontinued: i) Prescribed formats of registers FLM-1 to FLM-7 under the Master Direction \u2013 Reporting under FEMA. However, FFMCs and non-bank AD Category-II entities shall continue to maintain complete and accurate records of all foreign exchange transactions undertaken by them and shall make such records available to the Reserve Bank for inspection/supervisory purposes, as and when required. ii) Return titled \u201cQuarterly Statement showing summation of Foreign Currency Account opened in India out of export proceeds of Foreign Currency Notes / encashed Travellers\u2019 Cheques.\u201d iii) Requirement for submission of separate List of Additional Locations under MTSS and the requirement of quarterly confirmation regarding the veracity of the list published on the Reserve Bank\u2019s website. iv) Return relating to Statement of Collateral under MTSS. Indian Agents shall, however, continue to ensure adequacy of collateral in terms of extant instructions.",
+      "created_at": "2026-06-24T16:33:56.914164",
+      "source": "RBI"
     },
-    "treasury_liquidity_001": {
-      "clause_id": "treasury_liquidity_001",
-      "circular_id": "RBI/2024-03/12",
-      "circular_date": "2024-03-20",
-      "domain": "Treasury",
-      "section_title": "Liquidity Coverage Ratio",
-      "raw_text": "Banks must maintain a minimum Liquidity Coverage Ratio (LCR) of 100% of net cash outflows for a 30-day stress period.",
-      "created_at": "2024-03-20",
-      "source": "RBI Advisory"
-    },
-    "data_privacy_001": {
-      "clause_id": "data_privacy_001",
-      "circular_id": "RBI/2024-04/06",
-      "circular_date": "2024-04-10",
-      "domain": "Risk",
-      "section_title": "Customer Data Protection",
-      "raw_text": "Customer personal data must be encrypted at rest using AES-256 encryption or equivalent.",
-      "created_at": "2024-04-10",
-      "source": "RBI Advisory"
-    },
-    "stress_testing_001": {
-      "clause_id": "stress_testing_001",
-      "circular_id": "RBI/2024-05/03",
-      "circular_date": "2024-05-15",
-      "domain": "Risk",
-      "section_title": "Stress Testing Requirements",
-      "raw_text": "Banks must conduct quarterly stress tests on their credit portfolio under adverse market conditions.",
-      "created_at": "2024-05-15",
-      "source": "RBI Advisory"
-    },
-    "board_oversight_001": {
-      "clause_id": "board_oversight_001",
-      "circular_id": "RBI/2024-06/09",
-      "circular_date": "2024-06-01",
-      "domain": "Risk",
-      "section_title": "Board Governance",
-      "raw_text": "The Board must review risk management policies and procedures at least once per quarter.",
-      "created_at": "2024-06-01",
-      "source": "RBI Advisory"
-    },
-    "cyber_incident_001": {
-      "clause_id": "cyber_incident_001",
-      "circular_id": "RBI/2024-07/02",
-      "circular_date": "2024-07-10",
-      "domain": "Information Security",
-      "section_title": "Incident Reporting",
-      "raw_text": "All cyber incidents must be reported to the regulator within 48 hours of discovery.",
-      "created_at": "2024-07-10",
-      "source": "RBI Advisory"
-    },
-    "export_credit_001": {
-      "clause_id": "export_credit_001",
-      "circular_id": "RBI/2024-08/04",
-      "circular_date": "2024-08-15",
-      "domain": "Risk",
-      "section_title": "Export Credit Exposure",
-      "raw_text": "Export credit exposure should not exceed 5% of total advances for any single country.",
-      "created_at": "2024-08-15",
-      "source": "RBI Advisory"
+    "CIR-790e24091f3b::4": {
+      "clause_id": "CIR-790e24091f3b::4",
+      "circular_id": "CIR-790e24091f3b",
+      "circular_date": "June 24, 2026",
+      "domain": "IT Risk",
+      "section_title": "Business Continuity - Recovery Point Objective",
+      "raw_text": "The directions contained in this circular have been issued under sections 10(4) and 11(1) of the Foreign Exchange Management Act, 1999 (42 of 1999) and are without prejudice to permissions / approvals, if any, required under any other law. Yours Sincerely, (N Senthil Kumar) Chief General Manager Annex FLM-8: Statement of purchases and sales of foreign currency notes [See paragraph 16(i) of Section V of Master Direction - Money Changing Activities] Name of the FFMC / Non-bank AD Cat-II: ____________________________ Licence No. ____________________ Month and Year of Return: ____________________________ USD GBP EURO JPY Others (Specify) A Opening Balance B Purchases: B.1 Purchases from Public B.2 Purchases through Franchisees / FxCs* B.3 Purchases from AD banks B.4 Purchases from other FFMCs / Non-bank ADs B.5 Imports C Sales: C.1 Sales to Public C.2 Sales through FxCs* C.3 Sales to AD banks C.4 Sales to other FFMCs / Non-bank ADs C.5 Exports D Foreign Currency Notes Written- off E Closing Balance * Not applicable to FFMCs Purpose\u2011code\u2011wise Purchases / Sales to Public during the month: Purpose Code Purpose Description Currency Amount List of Forex Correspondents (FxCs) appointed by Principal ADs [See Regulation 14(b) of Foreign Exchange Management (Authorised Persons) Regulations, 2026] Name of the Principal AD: ____________________________ Quarter ended: ____________________________ # Name of the FxC Address of FxC outlet # City State PIN Code Date of Appointment as FxC as per the agreement Foreign exchange facilities available at the FxC outlet 1 2 3 # In case an FxC operates through multiple outlets, the address of each outlet may be furnished in separate rows. List of Franchisees appointed by Authorised Persons [See paragraph 3(ii) of A.P. (DIR Series) Circular No.17 dated June 24, 2026] Name of the Authorised Person: ____________________________ Quarter ended: ____________________________ # Name of Franchisee Address of the Franchisee City State PIN Code Date of Appointment as Franchisee as per the agreement 1 2 3 Fit and Proper criteria [See Regulation 8(6)(c) of Foreign Exchange Management (Authorised Persons) Regulations, 2026] Name of the Entity: _____________________________________ Sr No. Particulars Information A. Personal details Full name Designation Present address Permanent address E-mail address Nationality",
+      "created_at": "2026-06-24T16:34:15.712851",
+      "source": "RBI"
     }
   },
   "compliance_maps": [
     {
-      "map_id": "83ade113-5cfd-4775-8a61-354049dcc492",
+      "map_id": "4fe461ca-3fc1-4701-9ba3-69213c723361",
       "clause_ref": "NEW",
       "change_type": "ADDED",
-      "change_reason": "New regulatory obligation introduced",
+      "change_reason": "A new obligation was introduced by referencing and modifying FEMA-related returns and reporting requirements through an RBI circular.",
       "impact": "HIGH",
-      "summary": "New high impact regulatory clause added",
+      "summary": "Compliance officers must now ensure adherence to the updated FEMA reporting obligations specified in the referenced regulations and circulars.",
       "old_obligation": null,
-      "new_obligation": "In partial modification of the A.P. (DIR Series) Circular No. 13 dated June 8, 2026 on \u2018NOP- INR position of Authorised Dealer Category-I banks\u2019, it has been decided that AD Cat-I banks shall exclude the positions arising out of hedged transactions related to FCNR (B) deposits, External Commercial Borrowings and Overseas Foreign Currency Borrowings raised in terms of the aforesaid circulars, while ensuring compliance with the provisions of the A.P. (DIR Series) Circular No. 24 dated March 27, 2026 and for computation of net overnight open position in terms of the aforesaid Master Direction.",
-      "affected_department": "General Legal",
-      "deadline": "2026-06-23T17:01:06.826561",
-      "source_circular": "CIR-e609441f5777",
-      "confidence": 0.92
+      "new_obligation": "\ufffd\u0935\u0926\u0947\u0936\u0940 \u092e \u0941 \u0926\u094d\u0930\u093e \ufffd\u0935\u092d\u093e\u0917, \u0915 \u0947\u0902 \u0926\u094d\u0930\ufffd\u092f \u0915\u093e\u092f\u093e\u0930\u094d\u0932\u092f, \u0915 \u0947\u0902 \u0926\u094d\u0930\ufffd\u092f \u0915\u093e\u092f\u093e\u0930\u094d\u0932\u092f \u092d\u0935\u0928, \u0936\u0939\ufffd\u0926 \u092d\u0917\u0924 \ufffd\u0938\u0902\u0939 \u092e\u093e\u0917\u0930\u094d, \u092b\u094b\u091f\u0930\u094d, \u092e \u0941 \u0902\u092c\u0908-400 001, \u092d\u093e\u0930\u0924 Foreign Exchange Department, Central Office ,Central Office Building., Shahid Bhagat Singh Road, Fort, Mumbai-400 001, India \u091f\u0947\u0932\ufffd\u092b\u094b\u0928/Tel. No.022-22601000 \u092b\u0948 \u0915\u094d\u0938/Fax No. 022- 22665330 \u0905\u092e\u0930 \u092d\u0935\u0928 \u092b\u094b\u0928 022-22603000 \u092b\u0948 \u0915\u094d\u0938 22694935, \u0908\u092e\u0947\u0932: helpfed@rbi.org.in \ufffd\u0939\u0902\u0926\ufffd \u092e \u0947\u0902 \u0915\u093e\u092e \u0915\u0930\u0928\u093e \u0906\u0938\u093e\u0928 \u0939\u0948, \u0907\u0938\u0915\u093e \u092a\u094d\u0930\u092f\u094b\u0917 \u092c\u095d\u093e\u0907\u090f \u0964 RBI/2026-27/174 A.P. (DIR Series) Circular No.17 June 24, 2026 To All Authorised Persons Madam / Sir, Modification of Returns / Reporting requirements under FEMA, 1999 Attention of Authorised Persons is invited to the provisions contained in the Foreign Exchange Management (Authorised Persons) Regulations, 2026, Master Direction \u2013 Money Changing Activities, Master Direction \u2013 Money Transfer Service Scheme (MTSS), and Master Direction \u2013 Reporting under Foreign Exchange Management Act, 1999, as amended from time to time.",
+      "affected_department": "Risk Management",
+      "deadline": "2026-06-24T16:31:48.976606",
+      "source_circular": "CIR-790e24091f3b",
+      "confidence": 0.9
     },
     {
-      "map_id": "f7a669ad-89c1-4d35-bd66-d112dc193960",
+      "map_id": "10716c65-c51e-43ef-a987-2e17e39e24b5",
       "clause_ref": "NEW",
       "change_type": "ADDED",
-      "change_reason": "New regulatory obligation introduced",
+      "change_reason": "A new obligation was introduced for rationalising and modifying reporting formats under the Foreign Exchange Management (Authorised Persons) Regulations, 2026, which adds compliance requirements without specifying high-risk elements.",
       "impact": "MEDIUM",
-      "summary": "New medium impact regulatory clause added",
+      "summary": "Compliance officers must now implement the prescribed reporting changes from the Foreign Exchange Management (Authorised Persons) Regulations, 2026 to ensure adherence.",
       "old_obligation": null,
-      "new_obligation": "The directions contained in this circular have been issued under Sections 10(4), 11(1) and 11(2) of the FEMA, 1999 (42 of 1999) and are without prejudice to permissions / approvals, if any, required under any other law. Yours faithfully, (Dimple Bhandia) Chief General Manager",
-      "affected_department": "General Legal",
-      "deadline": "2026-06-23T17:01:06.830232",
-      "source_circular": "CIR-e609441f5777",
-      "confidence": 0.92
+      "new_obligation": "On a review, it has been decided to rationalise certain reporting requirements, and prescribe/modify reporting formats pursuant to the Foreign Exchange Management (Authorised Persons) Regulations, 2026.",
+      "affected_department": "Risk Management",
+      "deadline": "2026-06-24T16:32:32.428216",
+      "source_circular": "CIR-790e24091f3b",
+      "confidence": 0.98
     },
     {
-      "map_id": "47878904-3384-4400-8ac8-0dba6d855414",
+      "map_id": "2cdbb806-e506-4752-a9c5-60a2b3767b07",
       "clause_ref": "NEW",
       "change_type": "ADDED",
-      "change_reason": "New regulatory obligation introduced",
+      "change_reason": "New obligations are introduced for specific entities to report certain arrangements quarterly, which may increase their compliance workload.",
       "impact": "HIGH",
-      "summary": "New high impact regulatory clause added",
+      "summary": "Entities maintaining Nostro accounts (exempt from FLM-8), Authorised Persons with franchisee arrangements, and Indian Agents under MTSS must now submit new lists quarterly as specified in the additional instructions.",
       "old_obligation": null,
-      "new_obligation": "In partial modification of the A.P. (DIR Series) Circular No. 13 dated June 8, 2026 on \u2018NOP- INR position of Authorised Dealer Category-I banks\u2019, it has been decided that AD Cat-I banks shall exclude the positions arising out of hedged transactions related to FCNR (B) deposits, External Commercial Borrowings and Overseas Foreign Currency Borrowings raised in terms of the aforesaid circulars, while ensuring compliance with the provisions of the A.P. (DIR Series) Circular No. 24 dated March 27, 2026 and for computation of net overnight open position in terms of the aforesaid Master Direction.",
+      "new_obligation": "The formats for submission of various returns are provided in the Annex to this circular. The following additional instructions shall apply: i) The revised format of FLM-8 shall also capture details relating to write-off of foreign currency notes. The requirement of obtaining prior approval of the Reserve Bank for write-off of foreign currency notes exceeding USD 2000 has been discontinued. Entities maintaining Nostro accounts and reporting the relevant transactions through FETERS shall not submit FLM-8 returns. ii) Authorised Persons having franchisee arrangements shall submit a list of such arrangements within 15 days from the end of each calendar quarter. iii) Indian Agents under MTSS shall submit the list of Sub-Agents on a quarterly basis within 15 days from the end of each calendar quarter.",
       "affected_department": "General Legal",
-      "deadline": "2026-06-23T17:04:54.689305",
-      "source_circular": "CIR-1e593db3c5ad",
-      "confidence": 0.92
+      "deadline": "2026-06-24T16:32:50.659321",
+      "source_circular": "CIR-790e24091f3b",
+      "confidence": 0.99
     },
     {
-      "map_id": "4187a818-5f8c-4b37-b125-8836c2d78aa8",
+      "map_id": "9af2dae4-4fea-4434-958d-b0a6d426eb05",
       "clause_ref": "NEW",
-      "change_type": "ADDED",
-      "change_reason": "New regulatory obligation introduced",
-      "impact": "MEDIUM",
-      "summary": "New medium impact regulatory clause added",
+      "change_type": "MODIFIED",
+      "change_reason": "The new clause imposes concrete reporting obligations previously absent, replacing vague introduction of a requirement.",
+      "impact": "HIGH",
+      "summary": "Banks must now implement specific reporting procedures for foreign currency note transactions and forex correspondents as mandated by the detailed Annex FLM-8 form under sections 10(4) and 11(1) of FEMA.",
       "old_obligation": null,
-      "new_obligation": "The directions contained in this circular have been issued under Sections 10(4), 11(1) and 11(2) of the FEMA, 1999 (42 of 1999) and are without prejudice to permissions / approvals, if any, required under any other law. Yours faithfully, (Dimple Bhandia) Chief General Manager",
-      "affected_department": "General Legal",
-      "deadline": "2026-06-23T17:04:54.691502",
-      "source_circular": "CIR-1e593db3c5ad",
-      "confidence": 0.92
+      "new_obligation": "The directions contained in this circular have been issued under sections 10(4) and 11(1) of the Foreign Exchange Management Act, 1999 (42 of 1999) and are without prejudice to permissions / approvals, if any, required under any other law. Yours Sincerely, (N Senthil Kumar) Chief General Manager Annex FLM-8: Statement of purchases and sales of foreign currency notes [See paragraph 16(i) of Section V of Master Direction - Money Changing Activities] Name of the FFMC / Non-bank AD Cat-II: ____________________________ Licence No. ____________________ Month and Year of Return: ____________________________ USD GBP EURO JPY Others (Specify) A Opening Balance B Purchases: B.1 Purchases from Public B.2 Purchases through Franchisees / FxCs* B.3 Purchases from AD banks B.4 Purchases from other FFMCs / Non-bank ADs B.5 Imports C Sales: C.1 Sales to Public C.2 Sales through FxCs* C.3 Sales to AD banks C.4 Sales to other FFMCs / Non-bank ADs C.5 Exports D Foreign Currency Notes Written- off E Closing Balance * Not applicable to FFMCs Purpose\u2011code\u2011wise Purchases / Sales to Public during the month: Purpose Code Purpose Description Currency Amount List of Forex Correspondents (FxCs) appointed by Principal ADs [See Regulation 14(b) of Foreign Exchange Management (Authorised Persons) Regulations, 2026] Name of the Principal AD: ____________________________ Quarter ended: ____________________________ # Name of the FxC Address of FxC outlet # City State PIN Code Date of Appointment as FxC as per the agreement Foreign exchange facilities available at the FxC outlet 1 2 3 # In case an FxC operates through multiple outlets, the address of each outlet may be furnished in separate rows. List of Franchisees appointed by Authorised Persons [See paragraph 3(ii) of A.P. (DIR Series) Circular No.17 dated June 24, 2026] Name of the Authorised Person: ____________________________ Quarter ended: ____________________________ # Name of Franchisee Address of the Franchisee City State PIN Code Date of Appointment as Franchisee as per the agreement 1 2 3 Fit and Proper criteria [See Regulation 8(6)(c) of Foreign Exchange Management (Authorised Persons) Regulations, 2026] Name of the Entity: _____________________________________ Sr No. Particulars Information A. Personal details Full name Designation Present address Permanent address E-mail address Nationality",
+      "affected_department": "Risk Management",
+      "deadline": "2026-06-24T16:34:15.710655",
+      "source_circular": "CIR-790e24091f3b",
+      "confidence": 0.95
     }
   ],
   "human_review_queue": [
     {
-      "map_id": "89e0d887-f26f-4c0e-8c00-2a122edff352",
+      "map_id": "711e846b-9156-4006-bd85-f46f5eb8bd2b",
       "clause_ref": "NEW",
       "change_type": "ADDED",
       "change_reason": "New regulatory obligation introduced",
       "impact": "HIGH",
       "summary": "New high impact regulatory clause added",
       "old_obligation": null,
-      "new_obligation": "In partial modification of the A.P. (DIR Series) Circular No. 13 dated June 8, 2026 on \u2018NOP- INR position of Authorised Dealer Category-I banks\u2019, it has been decided that AD Cat-I banks shall exclude the positions arising out of hedged transactions related to FCNR (B) deposits, External Commercial Borrowings and Overseas Foreign Currency Borrowings raised in terms of the aforesaid circulars, while ensuring compliance with the provisions of the A.P. (DIR Series) Circular No. 24 dated March 27, 2026 and for computation of net overnight open position in terms of the aforesaid Master Direction.",
-      "affected_department": "General Legal",
-      "deadline": "2026-06-24T08:15:21.493230",
-      "source_circular": "CIR-fb266cb0be13",
+      "new_obligation": "The following instructions / returns / forms stand discontinued: i) Prescribed formats of registers FLM-1 to FLM-7 under the Master Direction \u2013 Reporting under FEMA. However, FFMCs and non-bank AD Category-II entities shall continue to maintain complete and accurate records of all foreign exchange transactions undertaken by them and shall make such records available to the Reserve Bank for inspection/supervisory purposes, as and when required. ii) Return titled \u201cQuarterly Statement showing summation of Foreign Currency Account opened in India out of export proceeds of Foreign Currency Notes / encashed Travellers\u2019 Cheques.\u201d iii) Requirement for submission of separate List of Additional Locations under MTSS and the requirement of quarterly confirmation regarding the veracity of the list published on the Reserve Bank\u2019s website. iv) Return relating to Statement of Collateral under MTSS. Indian Agents shall, however, continue to ensure adequacy of collateral in terms of extant instructions.",
+      "affected_department": "Risk Management",
+      "deadline": "2026-06-24T16:33:56.911240",
+      "source_circular": "CIR-790e24091f3b",
       "confidence": 0.71
-    },
-    {
-      "map_id": "f9d58cfa-ffd2-4484-baf4-ec27413aac36",
-      "clause_ref": "NEW",
-      "change_type": "ADDED",
-      "change_reason": "New regulatory obligation introduced",
-      "impact": "MEDIUM",
-      "summary": "New medium impact regulatory clause added",
-      "old_obligation": null,
-      "new_obligation": "The directions contained in this circular have been issued under Sections 10(4), 11(1) and 11(2) of the FEMA, 1999 (42 of 1999) and are without prejudice to permissions / approvals, if any, required under any other law. Yours faithfully, (Dimple Bhandia) Chief General Manager",
-      "affected_department": "General Legal",
-      "deadline": "2026-06-24T08:15:23.605712",
-      "source_circular": "CIR-fb266cb0be13",
-      "confidence": 0.63
     }
   ]
 }

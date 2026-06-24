@@ -1,7 +1,8 @@
-import type { LedgerBlock, PipelineRecord } from "../types/domain.js";
+import type { LedgerBlock, LedgerAgent, PipelineRecord } from "../types/domain.js";
 import { ledgerBackend } from "../store/ledger/index.js";
 import { config } from "../config/index.js";
 import { sha256, sha256Of, shortHash } from "../utils/crypto.js";
+import { fail } from "../utils/errors.js";
 
 export interface ChainOfCustody {
   refId: string;
@@ -11,6 +12,7 @@ export interface ChainOfCustody {
     timestamp: string;
     hash: string;
     shortHash: string;
+    submittedBy: string | null;
   }[];
 }
 
@@ -69,6 +71,7 @@ export const ledgerService = {
         timestamp: b.timestamp,
         hash: b.hash,
         shortHash: shortHash(b.hash),
+        submittedBy: b.submittedBy ?? null,
       })),
     };
   },
@@ -79,6 +82,20 @@ export const ledgerService = {
 
   async verifyIntegrity(): Promise<{ valid: boolean; brokenAt: number | null }> {
     return ledgerBackend.verifyChain();
+  },
+
+  /** The on-chain agent registry (Fabric-native identity). Empty on hash-chain. */
+  async agents(): Promise<LedgerAgent[]> {
+    return ledgerBackend.listAgents ? ledgerBackend.listAgents() : [];
+  },
+
+  /** Registers the backend's Fabric identity as an agent scoped to block kinds.
+   *  Fabric-only; throws on the hash-chain backend (no submitter identity). */
+  async registerAgent(id: string, role: string, allowedKinds: string[]): Promise<LedgerAgent> {
+    if (!ledgerBackend.registerAgent) {
+      throw fail("CONFLICT", "Agent registry requires the Fabric ledger backend");
+    }
+    return ledgerBackend.registerAgent(id, role, allowedKinds);
   },
 
   /** The live trust-layer topology, sourced from the active backend + config. */

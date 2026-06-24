@@ -232,6 +232,8 @@ needed.
 | Node won't start: `ModuleNotFoundError` | `PYTHONPATH` not set in that terminal | Re-run the `$env:PYTHONPATH = ...` line before uvicorn |
 | Backend log: `hash-chain` not `Fabric` | Chain not up, or `FABRIC_ENABLED=false` | Run step 2 (`start-blockchain.sh`), confirm `FABRIC_ENABLED=true`, restart backend |
 | Ledger calls fail / backend can't reach chain | Fabric containers down | Re-run `start-blockchain.sh` (it restarts what's missing) |
+| `start-blockchain.sh` fails: `ledger [auditchannel] already exists ACTIVE` / `failed to join channel` | After a reboot the peer containers were stopped but their channel ledger persisted on disk; the old script tried to recreate the channel | Fixed in `start-blockchain.sh` — it now detects stopped-but-present containers and just **starts** them instead of recreating the channel. Pull the latest script. If still stuck, `docker start orderer.example.com peer0.org1.example.com peer0.org2.example.com` then re-run the script (it will skip to chaincode + smoke test) |
+| Chaincode containers `Exited (255)` after reboot | CCAAS containers don't auto-restart | Re-run `start-blockchain.sh` — step 4 force-restarts them with the correct package id |
 | Chaincode deploy fails `unexpected EOF` | Legacy `deployCC` peer-build OOM | Use `start-blockchain.sh` — it deploys via CCAAS and avoids the peer build |
 | Port already in use | An old server is still running | `Get-NetTCPConnection -LocalPort 4000 -State Listen` then `Stop-Process -Id <pid> -Force` |
 

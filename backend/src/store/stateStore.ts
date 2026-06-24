@@ -105,6 +105,32 @@ class StateStore {
   }
 
   /**
+   * Removes a circular and its pipeline. The hash-linked audit ledger is
+   * append-only by design and is intentionally left intact. Returns false if
+   * the circular was already absent (idempotent delete).
+   */
+  async deleteCircular(id: string): Promise<boolean> {
+    return this.lock.run(async () => {
+      await this.load();
+      const circular = this.cache.circulars[id];
+      if (!circular) return false;
+      delete this.cache.circulars[id];
+      delete this.cache.pipelines[id];
+      this.rebuildRefIndex();
+      await this.persist();
+      return true;
+    });
+  }
+
+  /** Rebuilds the derived ref index from scratch after a removal. */
+  private rebuildRefIndex(): void {
+    this.refIndex.clear();
+    for (const circular of Object.values(this.cache.circulars)) {
+      this.indexCircular(circular);
+    }
+  }
+
+  /**
    * Atomic, idempotent stage transition. Re-applying the same stage is a no-op
    * (idempotent retries); an illegal jump throws CONFLICT.
    */

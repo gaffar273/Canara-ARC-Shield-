@@ -34,11 +34,22 @@ class ClauseIn(BaseModel):
     obligationBearing: bool = True
 
 
+class BaselineClauseIn(BaseModel):
+    """A clause from a circular this one explicitly cites. Supplied by the
+    backend from the resolved reference graph as the authoritative prior version
+    to diff against, ahead of the engine's own semantic history store."""
+    section: str
+    title: str
+    text: str
+    sourceCircularId: str
+
+
 class MapRequest(BaseModel):
     circularId: str
     regulator: Optional[str] = None
     circularDate: Optional[str] = None
     clauses: List[ClauseIn]
+    baseline: List[BaselineClauseIn] = []
 
 
 # ---- Response contract (mirrors backend types/domain.ts ComplianceMap) ------
@@ -115,12 +126,12 @@ def _deadline_iso(value) -> Optional[str]:
     return str(value)
 
 
-def _to_compliance_map(final_map: dict, needs_review: bool, section: str) -> ComplianceMapOut:
+def _to_compliance_map(final_map: dict, needs_review: bool, section: str, clause_id: str) -> ComplianceMapOut:
     department = final_map["affected_department"]
     return ComplianceMapOut(
         id=final_map["map_id"],
         circularId=final_map["source_circular"],
-        clauseId=final_map["clause_ref"],
+        clauseId=clause_id,
         changeType=final_map["change_type"],
         changeReason=final_map["change_reason"],
         impact=final_map["impact"],
@@ -151,6 +162,17 @@ async def generate_maps(req: MapRequest) -> List[ComplianceMapOut]:
     """
     maps: List[ComplianceMapOut] = []
 
+    baseline = [
+        {
+            "domain": b.section,
+            "section_title": b.title,
+            "raw_text": b.text,
+            "clause_id": f"{b.sourceCircularId}::cited",
+            "circular_id": b.sourceCircularId,
+        }
+        for b in req.baseline
+    ]
+
     for index, clause in enumerate(req.clauses):
         chunk = IncomingChunk(
             circular_id=req.circularId,
@@ -163,7 +185,7 @@ async def generate_maps(req: MapRequest) -> List[ComplianceMapOut]:
             chunk_hash=clause.id,
         )
 
-        state = await run_map_engine(chunk)
+        state = await run_map_engine(chunk, baseline=baseline)
 
         if state.get("errors"):
             logger.warning("Clause %s failed: %s", clause.id, state["errors"])
@@ -176,6 +198,7 @@ async def generate_maps(req: MapRequest) -> List[ComplianceMapOut]:
                 state["final_map"],
                 bool(state.get("requires_human_review")),
                 clause.section,
+                clause.id,
             )
         )
 

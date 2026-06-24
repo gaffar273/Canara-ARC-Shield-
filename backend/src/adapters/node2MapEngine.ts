@@ -3,11 +3,19 @@ import type { Clause, ComplianceMap, Regulator } from "../types/domain.js";
 import { postJson } from "./httpClient.js";
 import { fail } from "../utils/errors.js";
 
+export interface BaselineClause {
+  section: string;
+  title: string;
+  text: string;
+  sourceCircularId: string;
+}
+
 export interface MapRequest {
   circularId: string;
   regulator: Regulator | null;
   circularDate: string | null;
   clauses: Clause[];
+  baseline: BaselineClause[];
 }
 
 /**

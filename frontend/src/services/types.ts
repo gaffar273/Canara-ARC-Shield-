@@ -119,11 +119,29 @@ export interface LedgerBlock {
   payloadHash: string;
   prevHash: string;
   hash: string;
+  submittedBy?: string;
+}
+
+export interface LedgerAgent {
+  id: string;
+  role: string;
+  mspId: string;
+  certHash: string;
+  allowedKinds: string[];
+  registeredAt: string;
 }
 
 export interface ChainVerification {
   valid: boolean;
   brokenAt: number | null;
+}
+
+export interface CircularStatus {
+  status: "in_pipeline" | "failed" | "action_needed" | "in_progress" | "compliant";
+  total: number;
+  mapped: number;
+  pending: number;
+  flagged: number;
 }
 
 export interface LedgerNetwork {
@@ -190,4 +208,20 @@ export interface CopilotAnswer {
   answer: string;
   citations: Citation[];
   knowledgeBase: { circulars: number; clauses: number };
+}
+
+export interface SystemEntry {
+  system: string;
+  parameters: Record<string, string | number | boolean>;
+}
+
+export interface SystemsState {
+  systems: Record<string, SystemEntry>;
+}
+
+export interface ParameterValue {
+  department: string;
+  system: string;
+  parameter: string;
+  actualValue: string | number | boolean;
 }

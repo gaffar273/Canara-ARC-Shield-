@@ -102,7 +102,7 @@ backend/
     middleware/    auth/RBAC, error handler, validation, request context
     routes/        thin HTTP layer; no business logic
     services/      business logic (intake, orchestrator, ledger, dashboard, copilot)
-    adapters/      external agent clients (node1, node2, node3) + stub fallback
+    adapters/      external agent clients (node1, node2, node3, coreSystems)
     store/         persistence + state (single writer per resource)
     queue/         BullMQ setup, workers, job definitions
     utils/         hashing, response envelope, errors, ids
@@ -124,17 +124,23 @@ header (`compliance` | `it` | `cxo` | `auditor`).
 | POST | `/api/circulars` | compliance | Upload + intake a circular PDF (multipart `file`); returns the `Circular` |
 | GET  | `/api/circulars` | any role | List all circulars |
 | GET  | `/api/circulars/:id` | any role | One circular by id |
+| DELETE | `/api/circulars/:id` | compliance | Delete a circular + its pipeline and stored documents; the append-only audit ledger is preserved. Returns `{ circularId, deleted }` |
 | POST | `/api/circulars/:id/process` | compliance | Kick off async pipeline; returns `{ started }` (202) |
 | POST | `/api/circulars/:id/maps/:mapId/decision` | compliance | Human review decision (APPROVED/REJECTED/REASSIGNED + note); sealed on-chain as `HUMAN_DECISION`, returns updated MAP |
 | GET  | `/api/circulars/:id/pipeline` | any role | Pipeline record (stage, maps, verifications, receipt) |
 | GET  | `/api/circulars/:id/references` | any role | Reference graph: own ref, cited refs (resolved/dangling), and back-edges (`citedBy`) |
 | GET  | `/api/dashboard/summary` | any role | Aggregated executive metrics (cached, TTL) |
 | GET  | `/api/dashboard/role/:role` | any role | MAPs + verifications scoped to a role's workspace |
+| GET  | `/api/dashboard/review-queue` | any role | Low-confidence MAPs flagged for human review, enriched with circular title |
 | GET  | `/api/ledger/chain` | any role | Full hash-linked ledger |
 | GET  | `/api/ledger/verify` | any role | Chain integrity check `{ valid, brokenAt }` |
 | GET  | `/api/ledger/network` | any role | Live trust-layer topology: active backend (`fabric`/`hash-chain`) + Fabric MSP/channel/chaincode/peer |
-| GET  | `/api/ledger/custody/:refId` | any role | Chain of custody for one circular |
+| GET  | `/api/ledger/custody/:refId` | any role | Chain of custody for one circular; each event carries the `submittedBy` Fabric identity (null on hash-chain) |
+| GET  | `/api/ledger/agents` | any role | On-chain agent registry (Fabric-native identity); empty on hash-chain |
+| POST | `/api/ledger/agents/register` | cxo | Register the backend's Fabric identity as an agent scoped to block kinds (Fabric only) |
 | POST | `/api/copilot/ask` | any role | RAG-style answer with citations + verification status |
+| GET  | `/api/systems` | any role | Live core-systems operational state (the ground truth Node 3 verifies against), proxied from `CORE_SYSTEMS_URL` |
+| PUT  | `/api/systems/:dept/:param` | it, cxo | Update one live system parameter; drives Node 3 re-validation. Returns the updated `{ department, system, parameter, actualValue }` |
 
 ### Module contracts
 
@@ -147,15 +153,20 @@ header (`compliance` | `it` | `cxo` | `auditor`).
   preferred, since bodies cite by dept ref) and cited refs. `Circular.refNumber` + `references[]`
   hold the result; `stateStore` derives a `normalizedRef -> id` index in memory (never persisted).
 - `services/orchestrator` — `start(id)` enqueues; the worker drives N1→N2→N3→seal with atomic,
-  idempotent `stateStore.transition` calls and a ledger append per stage.
+  idempotent `stateStore.transition` calls and a ledger append per stage. Before MAPPING it builds
+  a **diff baseline** from the obligation clauses of the circulars this one explicitly cites
+  (resolved via the ref index) and passes it to Node 2, so an authoritative citation — not fuzzy
+  similarity — anchors the prior version each clause is amending.
 - `services/ledgerService` — Trust Layer API over the hash-linked ledger; the only place that
   appends custody events and seals audit receipts.
 - `services/dashboardService` — derives metrics from pipeline state; TTL-cached, invalidated by
   the orchestrator on completion.
 - `services/copilotService` — keyword retrieval over stored clauses; attaches citations +
   verification status; answer text proxies to Node 1 when its URL is set.
-- `adapters/node{1,2,3}` — external agent clients; call the service when its URL is set, else a
-  deterministic dev stub.
+- `adapters/node{1,2,3}` — external agent clients; call the service at its configured URL. If the
+  URL is unset the adapter throws `UPSTREAM_ERROR` (no silent stub) so a misconfigured pipeline
+  fails loudly rather than fabricating results. `adapters/coreSystems` proxies the Core Systems
+  operational state (read + update) for Node 3 and the posture dashboard.
 - `store/stateStore` + `store/ledgerStore` — single-writer (Mutex) persistence; atomic file writes.
 - `queue/` — `JobQueue` interface; in-process driver now, BullMQ when `REDIS_URL` is set.
 

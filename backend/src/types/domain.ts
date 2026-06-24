@@ -125,6 +125,19 @@ export interface LedgerBlock {
   payloadHash: string;
   prevHash: string;
   hash: string;
+  /** Fabric identity (MSP id + cert fingerprint) that sealed this block.
+   *  Present only on the Fabric backend once identity capture is deployed. */
+  submittedBy?: string;
+}
+
+/** An on-chain registered agent (Fabric-native identity scoped to block kinds). */
+export interface LedgerAgent {
+  id: string;
+  role: string;
+  mspId: string;
+  certHash: string;
+  allowedKinds: string[];
+  registeredAt: string;
 }
 
 export interface PipelineRecord {

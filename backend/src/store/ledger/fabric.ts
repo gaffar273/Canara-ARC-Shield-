@@ -5,7 +5,7 @@ import { credentials } from "@grpc/grpc-js";
 import { createPrivateKey } from "node:crypto";
 import path from "node:path";
 import { config } from "../../config/index.js";
-import type { LedgerBlock } from "../../types/domain.js";
+import type { LedgerBlock, LedgerAgent } from "../../types/domain.js";
 import { Mutex } from "../../utils/mutex.js";
 import { fail } from "../../utils/errors.js";
 import type { LedgerBackend, VerifyResult } from "./types.js";
@@ -95,6 +95,25 @@ export class FabricBackend implements LedgerBackend {
     // Chaincode uses -1 for "no break"; normalize to null to match the
     // hash-chain backend's VerifyResult shape.
     return { valid: raw.valid, brokenAt: raw.brokenAt < 0 ? null : raw.brokenAt };
+  }
+
+  async registerAgent(id: string, role: string, allowedKinds: string[]): Promise<LedgerAgent> {
+    return this.lock.run(async () => {
+      const contract = await this.getContract();
+      const bytes = await contract.submitTransaction(
+        "RegisterAgent",
+        id,
+        role,
+        allowedKinds.join(","),
+      );
+      return JSON.parse(utf8.decode(bytes)) as LedgerAgent;
+    });
+  }
+
+  async listAgents(): Promise<LedgerAgent[]> {
+    const contract = await this.getContract();
+    const bytes = await contract.evaluateTransaction("ListAgents");
+    return JSON.parse(utf8.decode(bytes)) as LedgerAgent[];
   }
 
   close(): void {

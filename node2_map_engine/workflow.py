@@ -1,5 +1,6 @@
 import uuid
 import logging
+import difflib
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 try:
@@ -23,9 +24,47 @@ from node2_map_engine.llm import LLMEngine
 
 logger = logging.getLogger(__name__)
 
-async def run_map_engine(chunk: IncomingChunk) -> Node2State:
+# A cited circular's clause whose text overlaps the incoming clause at/above this
+# ratio is treated as the prior version being amended. Lower than the semantic
+# store's bar because an explicit citation already established the relationship;
+# we only need to align which clause maps to which.
+_BASELINE_MATCH_THRESHOLD = 0.50
+
+
+def _match_baseline(
+    chunk: IncomingChunk, baseline: Optional[List[Dict[str, Any]]]
+) -> Optional[Dict[str, Any]]:
+    """Find the prior version of this clause among the explicitly cited circulars.
+
+    A citation ("this circular amends RBI/.../X") is an authoritative signal,
+    stronger than the semantic store's fuzzy similarity, so it is consulted
+    first. Exact section metadata wins; otherwise the best text overlap above
+    the threshold is taken.
+    """
+    if not baseline:
+        return None
+    for cand in baseline:
+        if cand.get("domain") == chunk.domain and cand.get("section_title") == chunk.section_title:
+            return cand
+    best: Optional[Dict[str, Any]] = None
+    best_ratio = 0.0
+    for cand in baseline:
+        ratio = difflib.SequenceMatcher(None, chunk.chunk_text, cand.get("raw_text", "")).ratio()
+        if ratio > best_ratio:
+            best_ratio, best = ratio, cand
+    return best if best_ratio >= _BASELINE_MATCH_THRESHOLD else None
+
+
+async def run_map_engine(
+    chunk: IncomingChunk, baseline: Optional[List[Dict[str, Any]]] = None
+) -> Node2State:
     """
     The main orchestration function. Represents the LangGraph execution flow.
+
+    `baseline` holds clauses from circulars this one explicitly cites (resolved
+    by the backend from the reference graph). When present it is the
+    authoritative source of the prior clause version; the semantic store is only
+    a fallback for clauses the citation did not cover.
     """
     logger.info(f"--- Starting Node 2 Pipeline for Chunk {chunk.chunk_index} ---")
     
@@ -47,10 +86,15 @@ async def run_map_engine(chunk: IncomingChunk) -> Node2State:
     llm = LLMEngine()
     
     try:
-        # STEP 1: Retrieval — never match the circular against its own clauses.
-        old_clause = storage.find_historical_clause(
-            chunk.domain, chunk.section_title, exclude_circular=chunk.circular_id
-        )
+        # STEP 1: Retrieval. An explicit citation is authoritative, so the cited
+        # circulars' clauses are consulted first; the semantic store over all
+        # history is only the fallback for clauses the citation did not cover.
+        # Either way, never match the circular against its own clauses.
+        old_clause = _match_baseline(chunk, baseline)
+        if not old_clause:
+            old_clause = storage.find_historical_clause(
+                chunk.domain, chunk.section_title, exclude_circular=chunk.circular_id
+            )
         if not old_clause:
             # Fallback to Vector Search
             old_clause = storage.vector_search_clause(

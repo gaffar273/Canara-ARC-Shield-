@@ -6,6 +6,7 @@ import { uploadSingle } from "../middleware/upload.js";
 import { intakeService } from "../services/intakeService.js";
 import { orchestrator } from "../services/orchestrator.js";
 import { reviewService } from "../services/reviewService.js";
+import { dashboardService } from "../services/dashboardService.js";
 import { stateStore } from "../store/stateStore.js";
 import type { DecisionStatus, Role } from "../types/domain.js";
 
@@ -42,6 +43,17 @@ circularsRouter.get(
     const circular = await stateStore.getCircular(id);
     if (!circular) throw fail("NOT_FOUND", `Unknown circular ${id}`);
     sendOk(res, circular);
+  }),
+);
+
+circularsRouter.delete(
+  "/:id",
+  requireRole("compliance"),
+  asyncHandler(async (req, res) => {
+    const id = param(req, "id");
+    await intakeService.remove(id);
+    dashboardService.invalidate();
+    sendOk(res, { circularId: id, deleted: true });
   }),
 );
 

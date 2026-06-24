@@ -21,6 +21,66 @@
       "description": "System/audit log retention minimum."
     },
     {
+      "check_id": "CHK-AVAILABILITY",
+      "keywords": ["availability", "uptime", "service level", "system uptime"],
+      "department": "Technology",
+      "parameter": "system_availability_percent",
+      "operator": ">=",
+      "requiredValue": 99.9,
+      "unit": "percent",
+      "description": "Core system availability must meet the mandated uptime."
+    },
+    {
+      "check_id": "CHK-PATCH-SLA",
+      "keywords": ["patch", "patching", "vulnerability fix", "security update", "remediation"],
+      "department": "Technology",
+      "parameter": "patch_sla_days",
+      "operator": "<=",
+      "requiredValue": 15,
+      "unit": "days",
+      "description": "Critical patches must be applied within the SLA."
+    },
+    {
+      "check_id": "CHK-BACKUP-FREQ",
+      "keywords": ["backup", "back up", "data backup", "backup frequency"],
+      "department": "Technology",
+      "parameter": "backup_frequency_hours",
+      "operator": "<=",
+      "requiredValue": 24,
+      "unit": "hours",
+      "description": "Backups must run at least daily."
+    },
+    {
+      "check_id": "CHK-DR-RPO",
+      "keywords": ["rpo", "recovery point", "data loss", "disaster recovery point"],
+      "department": "Technology",
+      "parameter": "dr_rpo_minutes",
+      "operator": "<=",
+      "requiredValue": 15,
+      "unit": "minutes",
+      "description": "Disaster-recovery RPO must stay within the mandated window."
+    },
+    {
+      "check_id": "CHK-DR-DRILL",
+      "keywords": ["dr drill", "disaster recovery", "recovery drill", "bcp test", "failover test"],
+      "department": "Technology",
+      "parameter": "dr_drill_frequency_per_year",
+      "operator": ">=",
+      "requiredValue": 2,
+      "unit": "per_year",
+      "description": "Disaster-recovery drills must run at the mandated frequency."
+    },
+    {
+      "check_id": "CHK-DATA-LOCALIZATION",
+      "keywords": ["data localization", "data localisation", "stored in india", "data residency", "within india"],
+      "department": "Technology",
+      "parameter": "data_localization_in_india",
+      "operator": "==",
+      "requiredValue": true,
+      "unit": "bool",
+      "description": "Payment/customer data must be stored within India."
+    },
+    {
       "check_id": "CHK-MFA",
       "keywords": ["multi-factor", "mfa", "two-factor", "2fa", "authentication"],
       "department": "Information Security",
@@ -69,6 +129,56 @@
       "requiredValue": "AES-256",
       "unit": "standard",
       "description": "Data at rest must be encrypted to the mandated standard."
+    },
+    {
+      "check_id": "CHK-ENCRYPTION-TRANSIT",
+      "keywords": ["in transit", "tls", "transport security", "data in motion", "ssl"],
+      "department": "Information Security",
+      "parameter": "encryption_in_transit",
+      "operator": "==",
+      "requiredValue": "TLS-1.3",
+      "unit": "standard",
+      "description": "Data in transit must use the mandated transport encryption."
+    },
+    {
+      "check_id": "CHK-PRIV-ACCESS",
+      "keywords": ["privileged access", "admin approval", "privileged account", "elevated access"],
+      "department": "Information Security",
+      "parameter": "privileged_access_approval",
+      "operator": "==",
+      "requiredValue": true,
+      "unit": "bool",
+      "description": "Privileged access must require documented approval."
+    },
+    {
+      "check_id": "CHK-VULN-SCAN",
+      "keywords": ["vulnerability scan", "vapt", "penetration test", "security assessment", "scan frequency"],
+      "department": "Information Security",
+      "parameter": "vulnerability_scan_frequency_days",
+      "operator": "<=",
+      "requiredValue": 30,
+      "unit": "days",
+      "description": "Vulnerability scans must run at the mandated frequency."
+    },
+    {
+      "check_id": "CHK-LOGIN-LOCKOUT",
+      "keywords": ["failed login", "lockout", "login attempts", "account lock", "brute force"],
+      "department": "Information Security",
+      "parameter": "failed_login_lockout_attempts",
+      "operator": "<=",
+      "requiredValue": 5,
+      "unit": "attempts",
+      "description": "Accounts must lock after the mandated failed-login threshold."
+    },
+    {
+      "check_id": "CHK-AUDIT-LOGGING",
+      "keywords": ["audit logging", "audit trail", "activity logging", "access logging"],
+      "department": "Information Security",
+      "parameter": "audit_logging_enabled",
+      "operator": "==",
+      "requiredValue": true,
+      "unit": "bool",
+      "description": "Audit logging must be enabled across in-scope systems."
     },
     {
       "check_id": "CHK-KYC-PERIODIC",
@@ -121,6 +231,46 @@
       "description": "STRs must be filed within the mandated window."
     },
     {
+      "check_id": "CHK-SANCTIONS",
+      "keywords": ["sanctions", "sanctions screening", "watchlist", "ofac", "un list", "screening"],
+      "department": "Compliance",
+      "parameter": "sanctions_screening_enabled",
+      "operator": "==",
+      "requiredValue": true,
+      "unit": "bool",
+      "description": "Sanctions/watchlist screening must be enabled."
+    },
+    {
+      "check_id": "CHK-CTR-THRESHOLD",
+      "keywords": ["ctr", "cash transaction report", "cash transaction", "currency transaction"],
+      "department": "Compliance",
+      "parameter": "ctr_threshold_inr",
+      "operator": "<=",
+      "requiredValue": 1000000,
+      "unit": "inr",
+      "description": "Cash transaction reporting threshold must not exceed the mandate."
+    },
+    {
+      "check_id": "CHK-COMPLAINT-SLA",
+      "keywords": ["complaint", "grievance", "redressal", "resolution", "borrower rights"],
+      "department": "Compliance",
+      "parameter": "complaint_resolution_days",
+      "operator": "<=",
+      "requiredValue": 30,
+      "unit": "days",
+      "description": "Customer complaints must be resolved within the mandated window."
+    },
+    {
+      "check_id": "CHK-NODAL-OFFICER",
+      "keywords": ["nodal officer", "principal officer", "grievance officer", "designated officer"],
+      "department": "Compliance",
+      "parameter": "nodal_officer_appointed",
+      "operator": "==",
+      "requiredValue": true,
+      "unit": "bool",
+      "description": "A nodal/principal officer must be appointed."
+    },
+    {
       "check_id": "CHK-CAPITAL-RATIO",
       "keywords": ["capital adequacy", "crar", "capital ratio", "tier 1", "adequacy ratio"],
       "department": "Treasury",
@@ -151,6 +301,26 @@
       "description": "Liquidity coverage ratio must stay at or above 100%."
     },
     {
+      "check_id": "CHK-NSFR",
+      "keywords": ["nsfr", "net stable funding", "stable funding"],
+      "department": "Treasury",
+      "parameter": "net_stable_funding_ratio_percent",
+      "operator": ">=",
+      "requiredValue": 100,
+      "unit": "percent",
+      "description": "Net stable funding ratio must stay at or above 100%."
+    },
+    {
+      "check_id": "CHK-LEVERAGE",
+      "keywords": ["leverage ratio", "leverage", "tier 1 leverage"],
+      "department": "Treasury",
+      "parameter": "leverage_ratio_percent",
+      "operator": ">=",
+      "requiredValue": 4,
+      "unit": "percent",
+      "description": "Leverage ratio must stay above the regulatory minimum."
+    },
+    {
       "check_id": "CHK-RISK-WEIGHT",
       "keywords": ["risk weight", "risk-weighted", "rwa", "revised risk", "risk weight model"],
       "department": "Risk Management",
@@ -162,13 +332,23 @@
     },
     {
       "check_id": "CHK-EXPOSURE-LIMIT",
-      "keywords": ["exposure", "single borrower", "concentration", "exposure limit"],
+      "keywords": ["single borrower", "single counterparty", "individual exposure"],
       "department": "Risk Management",
       "parameter": "single_borrower_exposure_limit_percent",
       "operator": "<=",
       "requiredValue": 15,
       "unit": "percent",
       "description": "Single-borrower exposure must stay within the prescribed cap."
+    },
+    {
+      "check_id": "CHK-GROUP-EXPOSURE",
+      "keywords": ["group exposure", "connected counterparties", "group of borrowers", "concentration"],
+      "department": "Risk Management",
+      "parameter": "group_exposure_limit_percent",
+      "operator": "<=",
+      "requiredValue": 25,
+      "unit": "percent",
+      "description": "Group exposure must stay within the prescribed cap."
     },
     {
       "check_id": "CHK-STRESS-TEST",
@@ -181,6 +361,16 @@
       "description": "Stress testing must run at least quarterly."
     },
     {
+      "check_id": "CHK-PCR",
+      "keywords": ["provision coverage", "pcr", "npa provision", "provisioning"],
+      "department": "Risk Management",
+      "parameter": "provision_coverage_ratio_percent",
+      "operator": ">=",
+      "requiredValue": 70,
+      "unit": "percent",
+      "description": "Provision coverage ratio must stay above the mandated floor."
+    },
+    {
       "check_id": "CHK-INCIDENT-SLA",
       "keywords": ["incident", "cyber incident", "report within", "within hours", "notify the regulator"],
       "department": "Information Security - Incident",
@@ -189,6 +379,26 @@
       "requiredValue": 6,
       "unit": "hours",
       "description": "Cyber incidents must be reported within the mandated SLA."
+    },
+    {
+      "check_id": "CHK-BREACH-DISCLOSURE",
+      "keywords": ["breach disclosure", "data breach", "breach notification", "disclose breach"],
+      "department": "Information Security - Incident",
+      "parameter": "breach_disclosure_enabled",
+      "operator": "==",
+      "requiredValue": true,
+      "unit": "bool",
+      "description": "Breach disclosure to affected parties must be enabled."
+    },
+    {
+      "check_id": "CHK-SOC-MONITORING",
+      "keywords": ["soc", "security operations", "24x7 monitoring", "round the clock", "continuous monitoring"],
+      "department": "Information Security - Incident",
+      "parameter": "soc_monitoring_24x7",
+      "operator": "==",
+      "requiredValue": true,
+      "unit": "bool",
+      "description": "24x7 security operations monitoring must be active."
     }
   ]
 }

@@ -72,6 +72,47 @@ def _is_english_line(line: str) -> bool:
     return ascii_letters / len(letters) >= 0.7
 
 
+def _is_hash_like(token: str) -> bool:
+    """A bare hash/opaque-id token unfit to be a title (e.g. a SHA fragment or an
+    upload named NT153AC48B7D5...). Long, no spaces, mostly hex/alphanumeric."""
+    t = token.strip()
+    if not t or " " in t:
+        return False
+    if len(t) >= 24 and re.fullmatch(r"[0-9A-Fa-f]+", t):
+        return True
+    # Long single run of alnum with a high digit ratio reads as an id, not a title.
+    if len(t) >= 20 and t.isalnum():
+        digits = sum(1 for c in t if c.isdigit())
+        return digits / len(t) >= 0.25
+    return False
+
+
+def _looks_like_title(value: Optional[str]) -> bool:
+    """Reject empty, mojibake, replacement-char, or hash-like candidates."""
+    if not value:
+        return False
+    v = value.strip()
+    if len(v) < 4 or "�" in v or _is_hash_like(v):
+        return False
+    return _is_english_line(v)
+
+
+def sanitize_title(candidate: Optional[str], text: str, filename: str, regulator: str) -> str:
+    """One clean, human-readable title. Tries the candidate, then a real heading
+    in the body, then the filename (only if it isn't a hash), then a generic
+    regulator label — never returns mojibake or an opaque id."""
+    if _looks_like_title(candidate):
+        return candidate.strip()[:160]
+    heading = extract_title(text, filename)
+    if _looks_like_title(heading):
+        return heading.strip()[:160]
+    stem = filename.rsplit(".", 1)[0]
+    if _looks_like_title(stem):
+        return stem[:160]
+    reg = (regulator or "Regulatory").strip()
+    return f"{reg} Circular"
+
+
 def extract_title(text: str, filename: str) -> str:
     """Subject line if present, else the first substantial English line, else the filename."""
     for line in (l.strip() for l in text.splitlines()):
@@ -178,7 +219,7 @@ def analyze_text(text: str, filename: str, linked: List[Dict], corpus: Optional[
             candidates.append(cand)
     return {
         "regulator": detect_regulator(text),
-        "title": extract_title(text, filename),
+        "title": sanitize_title(extract_title(text, filename), text, filename, detect_regulator(text)),
         "issuedDate": extract_issued_date(text),
         "sections": sections,
         "similarTo": best_similarity(text, candidates, circular_id=circular_id),

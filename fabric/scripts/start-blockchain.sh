@@ -34,10 +34,22 @@ ORG2="$TN/organizations/peerOrganizations/org2.example.com"
 ORDERER_CA="$TN/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem"
 
 # ---- 1. Network + channel -------------------------------------------------
+# Idempotency across reboots: once the peer containers exist, their channel
+# ledger lives on a Docker volume and survives a stop/reboot. Re-running
+# `network.sh up createChannel` then fails with "ledger [auditchannel] already
+# exists ACTIVE". So branch on container state:
+#   running           -> nothing to do
+#   present but stopped (post-reboot) -> just start them; ledger already there
+#   absent            -> fresh bring-up + channel creation
 if docker ps --format '{{.Names}}' | grep -q '^peer0.org1.example.com$'; then
   echo "==> [1/5] Network already running"
+elif docker ps -a --format '{{.Names}}' | grep -q '^peer0.org1.example.com$'; then
+  echo "==> [1/5] Containers present but stopped (post-reboot); starting them."
+  echo "          Channel ledger persists on disk, so NOT recreating the channel."
+  docker start orderer.example.com peer0.org1.example.com peer0.org2.example.com >/dev/null 2>&1 || true
+  sleep 4
 else
-  echo "==> [1/5] Bringing up 2-org network + channel '$CHANNEL'"
+  echo "==> [1/5] Bringing up 2-org network + channel '$CHANNEL' (fresh)"
   ./network.sh up createChannel -c "$CHANNEL" -ca
 fi
 
