@@ -13,7 +13,7 @@ The backend code never changes between them; only env does.
 
 ```
 fabric/
-  chaincode/audit-ledger/   Go smart contract (RecordBlock/GetChain/GetByRef/VerifyChain)
+  chaincode/audit-ledger/   Go smart contract (RecordBlock/GetChain/GetByRef/VerifyChain/RegisterAgent/ListAgents)
   scripts/
     up.sh                   download fabric-samples, boot 2-org test-network, deploy chaincode
     down.sh                 tear the network down
@@ -55,9 +55,32 @@ creates, and reaches the peer by its container hostname (`peer0.org1.example.com
 | `ledgerBackend.all()` | `GetChain()` | evaluate |
 | `ledgerBackend.forRef(id)` | `GetByRef(refId)` | evaluate |
 | `ledgerBackend.verifyChain()` | `VerifyChain()` | evaluate |
+| `ledgerBackend.registerAgent(...)` | `RegisterAgent(id, role, allowedKindsCSV)` | submit (ordered) |
+| `ledgerBackend.listAgents()` | `ListAgents()` | evaluate |
 
 Block timestamps come from the transaction (`GetTxTimestamp`), never `time.Now()`,
 so endorsements are deterministic.
+
+## Agent identity & policy enforcement
+
+Fabric-native, no Ethereum/ERC needed. Every `RecordBlock` captures the submitter's
+Fabric identity — `MSPID::sha256(cert)` — and stamps it on the block (`submittedBy`),
+giving cryptographic proof of *which* identity sealed each custody event. The field
+is outside the `blockHash` material, so blocks written before this existed still
+verify.
+
+`RegisterAgent` maintains an on-chain registry keyed by the caller's own identity
+(MSP id + cert fingerprint are read from the transaction, never trusted from args —
+an actor can only enroll itself), scoping each agent to the block kinds it may seal.
+`RecordBlock` then enforces it:
+
+- **Open mode** — no agents registered: any identity may seal (back-compat default).
+- **Enforced mode** — once any agent exists: the submitter must be a registered agent
+  whose `allowedKinds` permit the kind, else the transaction is rejected.
+
+Today the backend seals with a single Org1 user cert, so per-node *distinct* certs
+require enrolling more identities via the Fabric CA — the chaincode already supports
+it; the enrollment is the remaining infra step.
 
 ## Tear down
 

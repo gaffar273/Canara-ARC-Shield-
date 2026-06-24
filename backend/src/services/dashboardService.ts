@@ -1,5 +1,5 @@
 import { config } from "../config/index.js";
-import type { RegSection, Role } from "../types/domain.js";
+import type { RegSection, Role, VerificationStatus } from "../types/domain.js";
 import { stateStore } from "../store/stateStore.js";
 import { TtlCache } from "../utils/cache.js";
 
@@ -113,4 +113,66 @@ export const dashboardService = {
       .sort((a, b) => a.confidence - b.confidence);
     return { count: items.length, items };
   },
+
+  /**
+   * Per-circular compliance rollup. Separates the pipeline lifecycle (is analysis
+   * done) from the compliance reality (is the work actually done): an analysed
+   * circular is rarely "all green" — most obligations are PENDING until a
+   * department acts, FLAGGED where Node 3 found a live gap, MAPPED only where the
+   * bank already satisfies it. Derived from real MAPs + Node 3 verdicts.
+   */
+  async circularStatuses(): Promise<Record<string, CircularStatus>> {
+    const pipelines = await stateStore.listPipelines();
+    const out: Record<string, CircularStatus> = {};
+    for (const p of pipelines) {
+      out[p.circularId] = rollup(p);
+    }
+    return out;
+  },
 };
+
+export interface CircularStatus {
+  status: "in_pipeline" | "failed" | "action_needed" | "in_progress" | "compliant";
+  total: number;
+  mapped: number;
+  pending: number;
+  flagged: number;
+}
+
+function rollup(p: {
+  stage: string;
+  maps: { id: string }[];
+  verifications: { mapId: string; status: VerificationStatus }[];
+}): CircularStatus {
+  if (p.stage === "FAILED") return { status: "failed", total: 0, mapped: 0, pending: 0, flagged: 0 };
+
+  const verdictByMap = new Map(p.verifications.map((v) => [v.mapId, v.status]));
+  let mapped = 0;
+  let pending = 0;
+  let flagged = 0;
+  for (const m of p.maps) {
+    const v = verdictByMap.get(m.id);
+    if (v === "PASS") mapped += 1;
+    else if (v === "FAIL") flagged += 1;
+    else pending += 1; // REVIEW or not-yet-verified
+  }
+  const total = p.maps.length;
+
+  // Still analysing: it's in the pipeline.
+  if (p.stage !== "COMPLETE" && p.stage !== "SEALED") {
+    return { status: "in_pipeline", total, mapped, pending, flagged };
+  }
+  // Analysis finished but produced no obligations to act on — nothing was
+  // mapped, so this is NOT compliance, it needs a human look.
+  if (total === 0) {
+    return { status: "in_progress", total, mapped, pending, flagged };
+  }
+  // Compliant ONLY when every obligation is mapped AND verified satisfied.
+  const status =
+    flagged > 0
+      ? "action_needed"
+      : pending > 0 || mapped < total
+        ? "in_progress"
+        : "compliant";
+  return { status, total, mapped, pending, flagged };
+}

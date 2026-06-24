@@ -5,6 +5,7 @@ import { config } from "../config/index.js";
 import type { Circular } from "../types/domain.js";
 import { sha256, randomId } from "../utils/crypto.js";
 import { extractRefs } from "../utils/refExtractor.js";
+import { deriveTitle } from "../utils/title.js";
 import { fail } from "../utils/errors.js";
 import { ensureDir } from "../store/persistence.js";
 import { stateStore } from "../store/stateStore.js";
@@ -75,7 +76,7 @@ export const intakeService = {
 
     const circular: Circular = {
       id,
-      title: file.originalName.replace(/\.pdf$/i, ""),
+      title: deriveTitle(null, file.originalName, refNumber),
       regulator: null,
       sections: [],
       issuedDate: null,
@@ -104,5 +105,20 @@ export const intakeService = {
     if (!circular) throw fail("NOT_FOUND", `Unknown circular ${circularId}`);
     const textPath = circular.document.storedPath.replace(/\.pdf$/i, ".txt");
     return fs.readFile(textPath, "utf8");
+  },
+
+  /**
+   * Removes a circular: its state + pipeline and the stored PDF/text documents.
+   * The append-only audit ledger is preserved (chain of custody is permanent).
+   * Throws NOT_FOUND if the circular does not exist.
+   */
+  async remove(circularId: string): Promise<void> {
+    const circular = await stateStore.getCircular(circularId);
+    if (!circular) throw fail("NOT_FOUND", `Unknown circular ${circularId}`);
+    const pdfPath = circular.document.storedPath;
+    const textPath = pdfPath.replace(/\.pdf$/i, ".txt");
+    await fs.rm(pdfPath, { force: true });
+    await fs.rm(textPath, { force: true });
+    await stateStore.deleteCircular(circularId);
   },
 };

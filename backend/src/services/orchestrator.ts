@@ -4,10 +4,12 @@ import { fail } from "../utils/errors.js";
 import { createQueue } from "../queue/index.js";
 import { node1 } from "../adapters/node1Intelligence.js";
 import { node2 } from "../adapters/node2MapEngine.js";
+import type { BaselineClause } from "../adapters/node2MapEngine.js";
 import { node3 } from "../adapters/node3Verification.js";
 import { intakeService } from "./intakeService.js";
 import { ledgerService } from "./ledgerService.js";
 import { dashboardService } from "./dashboardService.js";
+import { looksLikeTitle } from "../utils/title.js";
 
 interface PipelineJob {
   circularId: string;
@@ -17,6 +19,25 @@ const queue = createQueue<PipelineJob>("pipeline");
 
 const log = (circularId: string, msg: string): void =>
   console.log(`[pipeline] ${circularId} ${msg}`);
+
+/**
+ * Builds Node 2's diff baseline from the obligation clauses of the circulars
+ * this one explicitly cites. Those clauses were extracted by Node 1 and live in
+ * each cited circular's pipeline record; a circular that hasn't been processed
+ * yet simply contributes nothing. An explicit citation is the authoritative
+ * prior version, so this takes precedence over Node 2's semantic history store.
+ */
+async function buildBaseline(citedIds: string[]): Promise<BaselineClause[]> {
+  const records = await Promise.all(citedIds.map((id) => stateStore.getPipeline(id)));
+  return records.flatMap((record) =>
+    (record?.intelligence?.clauses ?? []).map((clause) => ({
+      section: clause.section,
+      title: clause.title,
+      text: clause.text,
+      sourceCircularId: record!.circularId,
+    })),
+  );
+}
 
 async function runStages(circularId: string): Promise<void> {
   const startedAt = Date.now();
@@ -63,7 +84,7 @@ async function runStages(circularId: string): Promise<void> {
   );
   await stateStore.transition(circularId, "CLASSIFYING", (r, c) => {
     r.intelligence = intelligence;
-    c.title = intelligence.title;
+    if (looksLikeTitle(intelligence.title)) c.title = intelligence.title;
     c.regulator = intelligence.regulator;
     c.sections = intelligence.sections;
     c.issuedDate = intelligence.issuedDate;
@@ -74,11 +95,19 @@ async function runStages(circularId: string): Promise<void> {
   });
 
   log(circularId, "MAPPING -> Node 2 (MAP engine)...");
+  const baseline = await buildBaseline(linked.map((c) => c.id));
+  if (baseline.length > 0) {
+    log(
+      circularId,
+      `MAPPING baseline: ${baseline.length} clause(s) from ${linked.length} cited circular(s)`,
+    );
+  }
   const maps = await node2.generate({
     circularId,
     regulator: intelligence.regulator,
     circularDate: intelligence.issuedDate,
     clauses: intelligence.clauses,
+    baseline,
   });
   log(circularId, `MAPPING done: ${maps.length} MAP(s)`);
   await ledgerService.recordMapGenerated(circularId, maps);

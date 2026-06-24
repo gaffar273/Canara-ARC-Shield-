@@ -19,7 +19,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from node1_intelligence import llm
-from node1_intelligence.extractor import analyze_text
+from node1_intelligence.extractor import analyze_text, sanitize_title
 
 logger = logging.getLogger("node1.api")
 
@@ -132,7 +132,9 @@ async def analyze(req: AnalyzeRequest) -> IntelligenceResultOut:
 
     refined = await llm.refine(title, clauses)
     if refined:
-        title = refined.get("title") or title
+        candidate = refined.get("title")
+        if candidate:
+            title = sanitize_title(candidate, req.text, req.filename, verdict["regulator"])
         overrides = {c["id"]: c.get("title") for c in refined.get("clauses", []) if c.get("id")}
         for clause in clauses:
             if overrides.get(clause["id"]):

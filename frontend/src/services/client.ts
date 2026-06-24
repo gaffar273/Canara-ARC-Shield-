@@ -45,6 +45,23 @@ export async function post<T>(path: string, body: unknown, role: Role = "complia
   return unwrap<T>(res);
 }
 
+export async function del<T>(path: string, role: Role = "compliance"): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "DELETE",
+    headers: headers(role),
+  });
+  return unwrap<T>(res);
+}
+
+export async function put<T>(path: string, body: unknown, role: Role = "compliance"): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "PUT",
+    headers: { ...headers(role), "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return unwrap<T>(res);
+}
+
 export async function upload<T>(path: string, formData: FormData, role: Role = "compliance"): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",

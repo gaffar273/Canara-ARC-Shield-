@@ -5,7 +5,7 @@ import {
   CheckCircle, FileText, Hash, Database, Send, RefreshCw,
   Download, ArrowRight, AlertCircle, Award, Zap, Building2,
   Globe, Fingerprint, GitBranch, ChevronRight, Eye, Cpu,
-  Plus, Calendar, Filter, Upload, Link2, XCircle, User,
+  Plus, Calendar, Filter, Upload, Link2, XCircle, User, Trash2,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -13,9 +13,9 @@ import {
 } from "recharts";
 import { useApi } from "../hooks/useApi.js";
 import * as api from "../services/endpoints.js";
-import { uploadCircular, processCircular } from "../services/endpoints.js";
+import { uploadCircular, processCircular, deleteCircular } from "../services/endpoints.js";
 import { ApiError } from "../services/client.js";
-import { Loading, ErrorState, EmptyState, Placeholder } from "./components/States.js";
+import { Loading, ErrorState, EmptyState } from "./components/States.js";
 import type {
   Circular, PipelineStage, SectionScore, LedgerBlock, LedgerKind,
   Citation, Role, Impact,
@@ -56,6 +56,13 @@ function shortHash(h: string): string {
   return `0x${body.slice(0, 6)}…${body.slice(-4)}`;
 }
 
+function signerLabel(submittedBy: string | undefined): string {
+  if (!submittedBy) return "—";
+  const [msp, certHash] = submittedBy.split("::");
+  if (!certHash) return msp;
+  return `${msp} · ${certHash.slice(0, 8)}…`;
+}
+
 function dateOf(iso: string | null): string {
   if (!iso) return "—";
   return iso.slice(0, 10);
@@ -93,6 +100,43 @@ function circularStatus(stage: PipelineStage): "active" | "warning" | "complete"
 const STATUS_COLOR: Record<string, string> = { active: CB, warning: WN, complete: OK };
 const STATUS_LABEL: Record<string, string> = {
   active: "In Pipeline", warning: "Attention", complete: "Sealed",
+};
+
+/** Clause-level compliance status, derived from its MAP + Node 3 verdict.
+ *  MAPPED = verified satisfied, FLAGGED = Node 3 found a gap, PENDING = mapped
+ *  but work not yet verified done / awaiting review, UNMAPPED = no MAP yet. */
+type ClauseStatus = "MAPPED" | "PENDING" | "FLAGGED" | "UNMAPPED";
+
+const CLAUSE_STATUS_STYLE: Record<ClauseStatus, { bg: string; fg: string }> = {
+  MAPPED:   { bg: "#dcfce7", fg: "#15803d" },
+  PENDING:  { bg: "#fef9c3", fg: "#854d0e" },
+  FLAGGED:  { bg: "#fee2e2", fg: "#b91c1c" },
+  UNMAPPED: { bg: "#f1f5f9", fg: "#64748b" },
+};
+
+function clauseStatus(
+  clauseId: string,
+  maps: { id: string; clauseId: string }[],
+  verifications: { mapId: string; status: string }[],
+): ClauseStatus {
+  const map = maps.find(m => m.clauseId === clauseId);
+  if (!map) return "UNMAPPED";
+  const v = verifications.find(x => x.mapId === map.id);
+  if (!v) return "PENDING";
+  if (v.status === "PASS") return "MAPPED";
+  if (v.status === "FAIL") return "FLAGGED";
+  return "PENDING";
+}
+
+/** Honest circular-level badge from the compliance rollup (not the raw stage). */
+type RollupStatus = "in_pipeline" | "failed" | "action_needed" | "in_progress" | "compliant";
+
+const ROLLUP_BADGE: Record<RollupStatus, { label: string; bg: string; fg: string }> = {
+  in_pipeline:   { label: "IN PIPELINE",   bg: `${CB}14`, fg: CB },
+  failed:        { label: "FAILED",        bg: "#fee2e2", fg: "#b91c1c" },
+  action_needed: { label: "ACTION NEEDED", bg: "#ffedd5", fg: "#c2410c" },
+  in_progress:   { label: "IN PROGRESS",   bg: "#fef9c3", fg: "#854d0e" },
+  compliant:     { label: "COMPLIANT",     bg: "#dcfce7", fg: "#15803d" },
 };
 
 /* ─── SIDEBAR ──────────────────────────────────────────────────────────── */
@@ -540,23 +584,29 @@ function CircularDetail({ circular }: { circular: Circular }) {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold" style={{ fontFamily: "Barlow, sans-serif", color: "#0a1628" }}>Clause Overview</h3>
-          {clauses.length > 0 && <span className="text-[10px] text-muted-foreground">{clauses.length} clauses</span>}
+          {clauses.length > 0 && (
+            <span className="text-[10px] text-muted-foreground">
+              {clauses.length} total · {clauses.filter(c => clauseStatus(c.id, maps, verifications) === "MAPPED").length} mapped · {clauses.filter(c => { const s = clauseStatus(c.id, maps, verifications); return s === "PENDING"; }).length} pending · {clauses.filter(c => clauseStatus(c.id, maps, verifications) === "FLAGGED").length} flagged
+            </span>
+          )}
         </div>
         {pipeline.loading ? <Loading />
           : pipeline.error ? <ErrorState message={pipeline.error} onRetry={pipeline.reload} />
           : clauses.length === 0 ? <EmptyState title="No clauses extracted yet" sub="Clause extraction runs in Node 1 — appears once it’s connected." />
           : (
             <div className="space-y-1.5">
-              {clauses.map(clause => (
-                <div key={clause.id} className="flex items-center gap-3 px-3.5 py-2.5 rounded-md border border-border bg-white">
-                  <span className="font-mono text-[10.5px] font-bold w-10 shrink-0" style={{ color: CB }}>§{clause.id}</span>
-                  <span className="text-[12.5px] flex-1" style={{ fontFamily: "Inter" }}>{clause.title}</span>
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${CB}10`, color: CB }}>{clause.section}</span>
-                  {clause.obligationBearing && (
-                    <span className="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">obligation</span>
-                  )}
-                </div>
-              ))}
+              {clauses.map(clause => {
+                const cs = clauseStatus(clause.id, maps, verifications);
+                const style = CLAUSE_STATUS_STYLE[cs];
+                return (
+                  <div key={clause.id} className="flex items-center gap-3 px-3.5 py-2.5 rounded-md border border-border bg-white">
+                    <span className="font-mono text-[10.5px] font-bold w-10 shrink-0" style={{ color: CB }}>§{clause.id}</span>
+                    <span className="text-[12.5px] flex-1" style={{ fontFamily: "Inter" }}>{clause.title}</span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${CB}10`, color: CB }}>{clause.section}</span>
+                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded shrink-0" style={{ background: style.bg, color: style.fg }}>{cs}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
       </div>
@@ -591,10 +641,12 @@ function CircularDetail({ circular }: { circular: Circular }) {
 
 function CircularExplorer() {
   const { data, loading, error, reload } = useApi(() => api.listCirculars(), []);
+  const statuses = useApi(() => api.getCircularStatus(), []);
   const [query, setQuery] = useState("");
   const [reg, setReg]     = useState<string | null>(null);
   const [sel, setSel]     = useState<Circular | null>(null);
   const [busy, setBusy]   = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -622,11 +674,29 @@ function CircularExplorer() {
         setNotice(`Ingested ${created.refNumber ?? created.id}. Pipeline not started: ${msg}`);
       }
       reload();
+      statuses.reload();
       setSel(created);
     } catch (err) {
       setNotice(err instanceof ApiError ? err.message : String(err));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const onDelete = async (c: Circular) => {
+    if (!window.confirm(`Delete circular ${c.refNumber ?? c.id}? Its document is removed; the audit ledger is preserved.`)) return;
+    setDeletingId(c.id);
+    setNotice(null);
+    try {
+      await deleteCircular(c.id);
+      setNotice(`Deleted ${c.refNumber ?? c.id}.`);
+      if (sel?.id === c.id) setSel(null);
+      reload();
+      statuses.reload();
+    } catch (err) {
+      setNotice(err instanceof ApiError ? err.message : String(err));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -693,29 +763,45 @@ function CircularExplorer() {
               <EmptyState title="No circulars" sub="Upload an RBI circular PDF to get started." />
             )}
             {filtered.map(c => {
-              const status = circularStatus(c.stage);
+              const roll = statuses.data?.[c.id];
+              const badge = roll
+                ? ROLLUP_BADGE[roll.status]
+                : { label: STATUS_LABEL[circularStatus(c.stage)], bg: `${STATUS_COLOR[circularStatus(c.stage)]}18`, fg: STATUS_COLOR[circularStatus(c.stage)] };
               return (
-                <button
-                  key={c.id}
-                  onClick={() => setSel(c)}
-                  className={`w-full text-left px-4 py-3.5 border-b border-border transition-colors hover:bg-secondary/50 ${
-                    sel?.id === c.id ? "bg-secondary" : ""
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <span className="text-[10px] font-mono font-bold" style={{ color: CB }}>{c.refNumber ?? c.id}</span>
-                    <span className="text-[8.5px] font-extrabold px-1.5 py-0.5 rounded-sm uppercase tracking-wide text-white shrink-0"
-                      style={{ background: STATUS_COLOR[status] }}>
-                      {STATUS_LABEL[status]}
-                    </span>
-                  </div>
-                  <div className="text-[12px] font-semibold text-foreground leading-snug mb-2" style={{ fontFamily: "Inter" }}>{c.title}</div>
-                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                    {c.regulator && <span className="font-bold" style={{ color: CB }}>{c.regulator}</span>}
-                    <span>{dateOf(c.issuedDate ?? c.receivedAt)}</span>
-                    <span>{c.references.length} refs</span>
-                  </div>
-                </button>
+                <div key={c.id} className="relative group">
+                  <button
+                    onClick={() => setSel(c)}
+                    className={`w-full text-left px-4 py-3.5 border-b border-border transition-colors hover:bg-secondary/50 ${
+                      sel?.id === c.id ? "bg-secondary" : ""
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <span className="text-[10px] font-mono font-bold" style={{ color: CB }}>{c.refNumber ?? c.id}</span>
+                      <span className="text-[8.5px] font-extrabold px-1.5 py-0.5 rounded-sm uppercase tracking-wide shrink-0"
+                        style={{ background: badge.bg, color: badge.fg }}>
+                        {badge.label}
+                      </span>
+                    </div>
+                    <div className="text-[12px] font-semibold text-foreground leading-snug mb-2 pr-6" style={{ fontFamily: "Inter" }}>{c.title}</div>
+                    <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                      {c.regulator && <span className="font-bold" style={{ color: CB }}>{c.regulator}</span>}
+                      <span>{dateOf(c.issuedDate ?? c.receivedAt)}</span>
+                      {roll && roll.total > 0
+                        ? <span>{roll.mapped}/{roll.total} mapped{roll.flagged > 0 ? ` · ${roll.flagged} flagged` : ""}</span>
+                        : <span>{c.references.length} refs</span>}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => onDelete(c)}
+                    disabled={deletingId === c.id}
+                    title="Delete circular"
+                    aria-label={`Delete circular ${c.refNumber ?? c.id}`}
+                    className="absolute bottom-3 right-3 p-1.5 rounded text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-white hover:bg-[var(--er)] transition-all disabled:opacity-50"
+                    style={{ ["--er" as string]: ER }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -865,6 +951,7 @@ function BlockchainTrustCenter() {
   const chain = useApi(() => api.getChain(), []);
   const verify = useApi(() => api.verifyChain(), []);
   const network = useApi(() => api.getLedgerNetwork(), []);
+  const agents = useApi(() => api.getLedgerAgents(), []);
   const blocks = chain.data ?? [];
 
   const latestByKind = new Map<LedgerKind, LedgerBlock>();
@@ -997,6 +1084,33 @@ function BlockchainTrustCenter() {
               </div>
             </div>
 
+            {network.data?.backend === "fabric" && (
+              <div className="bg-white border border-border rounded-lg p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-bold" style={{ fontFamily: "Barlow, sans-serif", color: "#0a1628" }}>
+                    Registered Agents
+                  </h3>
+                  <span className="text-[10px] text-muted-foreground font-mono">{(agents.data ?? []).length} on-chain</span>
+                </div>
+                {agents.loading ? <Loading /> : (agents.data ?? []).length === 0 ? (
+                  <p className="text-[10.5px] text-muted-foreground">
+                    No agents registered — the ledger is in open mode. Register agents (cxo role) to enforce that only scoped Fabric identities can seal each block kind.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {(agents.data ?? []).map(a => (
+                      <div key={`${a.mspId}-${a.certHash}`} className="flex items-center gap-3 text-[10.5px] border-b border-border last:border-0 pb-2 last:pb-0">
+                        <span className="font-bold text-foreground w-32 truncate">{a.id}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold" style={{ background: `${CB}10`, color: CB }}>{a.role}</span>
+                        <span className="font-mono text-muted-foreground" title={`${a.mspId}::${a.certHash}`}>{a.mspId} · {a.certHash.slice(0, 8)}…</span>
+                        <span className="ml-auto font-mono text-[9.5px] text-muted-foreground">{a.allowedKinds.length ? a.allowedKinds.join(", ") : "all kinds"}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="bg-white border border-border rounded-lg p-5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold" style={{ fontFamily: "Barlow, sans-serif", color: "#0a1628" }}>
@@ -1015,6 +1129,7 @@ function BlockchainTrustCenter() {
                         <th className="py-1.5 font-bold">Event</th>
                         <th className="py-1.5 font-bold">Ref</th>
                         <th className="py-1.5 font-bold">Tx Hash</th>
+                        <th className="py-1.5 font-bold">Signed By</th>
                         <th className="py-1.5 font-bold text-right">Time</th>
                       </tr>
                     </thead>
@@ -1025,6 +1140,7 @@ function BlockchainTrustCenter() {
                           <td className="py-1.5 font-semibold text-foreground">{KIND_LABEL[b.kind] ?? b.kind}</td>
                           <td className="py-1.5 font-mono text-muted-foreground">{b.refId}</td>
                           <td className="py-1.5 font-mono" style={{ color: CB }}>{shortHash(b.hash)}</td>
+                          <td className="py-1.5 font-mono text-muted-foreground" title={b.submittedBy ?? ""}>{signerLabel(b.submittedBy)}</td>
                           <td className="py-1.5 font-mono text-muted-foreground text-right">{new Date(b.timestamp).toLocaleTimeString()}</td>
                         </tr>
                       ))}
@@ -1251,12 +1367,109 @@ const SEC_FEATURES = [
   { Icon: Globe,       title: "Regulatory Compliance", badge: "By Design",     desc: "Designed to align with RBI IT Framework and SEBI Cybersecurity guidelines." },
 ];
 
+function SystemParamRow({ dept, name, value, onSaved }: {
+  dept: string; name: string; value: string | number | boolean; onSaved: () => void;
+}) {
+  const isBool = typeof value === "boolean";
+  const [draft, setDraft] = useState(String(value));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const dirty = draft !== String(value);
+
+  const save = async (next: string | boolean) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.updateSystem(dept, name, next);
+      onSaved();
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3 px-3.5 py-2 border-b border-border last:border-0">
+      <span className="text-[11.5px] text-foreground flex-1 font-mono">{name}</span>
+      {isBool ? (
+        <button
+          disabled={busy}
+          onClick={() => save(!(value as boolean))}
+          className="text-[10px] font-bold px-2 py-1 rounded text-white disabled:opacity-40"
+          style={{ background: value ? OK : ER }}
+        >
+          {value ? "TRUE" : "FALSE"}
+        </button>
+      ) : (
+        <>
+          <input
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            disabled={busy}
+            className="w-28 px-2 py-1 text-[11.5px] font-mono rounded border border-border bg-white focus:outline-none focus:ring-1 text-right"
+          />
+          <button
+            disabled={busy || !dirty}
+            onClick={() => save(draft)}
+            className="text-[10px] font-bold px-2.5 py-1 rounded text-white disabled:opacity-30"
+            style={{ background: CB }}
+          >
+            Save
+          </button>
+        </>
+      )}
+      {err && <span className="text-[9.5px] text-red-600 max-w-[140px] truncate" title={err}>{err}</span>}
+    </div>
+  );
+}
+
+function CoreSystemsPanel() {
+  const { data, loading, error, reload } = useApi(() => api.getSystems(), []);
+  const systems = data?.systems ?? {};
+
+  return (
+    <div className="bg-white border border-border rounded-lg overflow-hidden">
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+        <div>
+          <h3 className="text-[13px] font-bold text-foreground" style={{ fontFamily: "Barlow, sans-serif" }}>
+            Core Systems Posture
+          </h3>
+          <p className="text-[10.5px] text-muted-foreground">
+            Live operational state the Verification Agent checks against. Edit a value, then reprocess a circular to see PASS/FAIL change.
+          </p>
+        </div>
+        <button onClick={reload} className="text-[10.5px] font-semibold px-2.5 py-1 rounded border border-border hover:bg-secondary flex items-center gap-1.5">
+          <RefreshCw size={11} /> Refresh
+        </button>
+      </div>
+      {loading && <Loading label="Loading systems…" />}
+      {error && <ErrorState message={error} onRetry={reload} />}
+      {data && (
+        <div className="grid grid-cols-2 gap-px bg-border">
+          {Object.entries(systems).map(([dept, entry]) => (
+            <div key={dept} className="bg-white">
+              <div className="px-3.5 py-2 bg-secondary/40 border-b border-border">
+                <div className="text-[11.5px] font-bold text-foreground">{dept}</div>
+                <div className="text-[9.5px] font-mono text-muted-foreground">{entry.system}</div>
+              </div>
+              {Object.entries(entry.parameters).map(([name, value]) => (
+                <SystemParamRow key={name} dept={dept} name={name} value={value} onSaved={reload} />
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SecurityPage() {
   return (
     <div className="flex flex-col h-full overflow-auto">
-      <PageHeader title="Security & Trust" sub="Architecture overview · informational" />
+      <PageHeader title="Security & Trust" sub="Live core-systems posture + architecture overview" />
       <div className="p-6 space-y-5">
-        <Placeholder title="Informational page" sub="These describe the platform's security design. Live posture metrics aren’t served by this service." />
+        <CoreSystemsPanel />
         <div className="grid grid-cols-3 gap-4">
           {SEC_FEATURES.map((f, i) => (
             <div key={i} className="bg-white border border-border rounded-lg p-5 hover:shadow-md transition-shadow">

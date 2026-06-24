@@ -41,6 +41,7 @@ export const config = {
     node2Url: process.env.NODE2_URL ?? "",
     node3Url: process.env.NODE3_URL ?? "",
     copilotUrl: process.env.COPILOT_URL ?? "",
+    coreSystemsUrl: process.env.CORE_SYSTEMS_URL ?? "",
     timeoutMs: num(process.env.AGENT_TIMEOUT_MS, 20_000),
   },
 

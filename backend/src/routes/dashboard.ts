@@ -23,6 +23,13 @@ dashboardRouter.get(
 );
 
 dashboardRouter.get(
+  "/circular-status",
+  asyncHandler(async (_req, res) => {
+    sendOk(res, await dashboardService.circularStatuses());
+  }),
+);
+
+dashboardRouter.get(
   "/role/:role",
   asyncHandler(async (req, res) => {
     const role = param(req, "role") as Role;

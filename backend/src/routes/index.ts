@@ -4,6 +4,7 @@ import { circularsRouter } from "./circulars.js";
 import { dashboardRouter } from "./dashboard.js";
 import { ledgerRouter } from "./ledger.js";
 import { copilotRouter } from "./copilot.js";
+import { systemsRouter } from "./systems.js";
 
 export const apiRouter = Router();
 
@@ -15,3 +16,4 @@ apiRouter.use("/circulars", circularsRouter);
 apiRouter.use("/dashboard", dashboardRouter);
 apiRouter.use("/ledger", ledgerRouter);
 apiRouter.use("/copilot", copilotRouter);
+apiRouter.use("/systems", systemsRouter);
