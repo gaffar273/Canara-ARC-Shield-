@@ -59,6 +59,20 @@ def strip_markdown_headers(text: str) -> str:
     body_lines = [l for l in lines if not l.strip().startswith("#")]
     return "\n".join(body_lines).strip()
 
+def extract_markdown_heading(text: str) -> str:
+    """Returns the first markdown heading in a chunk (e.g. '## Paragraph 18 - Cyber
+    Incident Reporting' -> 'Paragraph 18 - Cyber Incident Reporting'), or "".
+
+    The section/paragraph number lives in the chunk's own heading, but callers
+    (Node 1) usually pass a composed label like 'Cybersecurity - Incident
+    Reporting' that carries no number — so Signal 2 must recover the heading here
+    rather than trust the caller-supplied title alone."""
+    for line in (text or "").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            return stripped.lstrip("#").strip()
+    return ""
+
 class PolicyIdentifier:
     """
     Implements the 3-Signal Policy Identification logic to determine
@@ -68,7 +82,13 @@ class PolicyIdentifier:
         self.retriever = PolicyRetriever(db_path=db_path)
         self.normalizer = StandardTextNormalizer()
 
-    def identify(self, new_text: str, section_title: str, circular_id: str = "") -> Dict[str, Any]:
+    def identify(
+        self,
+        new_text: str,
+        section_title: str,
+        circular_id: str = "",
+        baseline_clauses: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         """
         Runs the 3-Signal matching cascade.
         Returns a dict: {
@@ -79,11 +99,17 @@ class PolicyIdentifier:
             "signal": "circular_ref" | "section_title" | "semantic" | "fallback",
             "needs_review": bool
         }
+
+        `baseline_clauses` are the authoritative prior versions supplied by the
+        caller (e.g. clauses of the circulars this one explicitly cites). They are
+        searched *before* the stored history, so an explicit citation wins over
+        the semantic history store.
         """
         logger.info(f"--- Identifying Policy Chunk: '{section_title}' ---")
-        
-        # Load all clauses once for scanning
-        clauses = self.retriever._load_clauses()
+
+        # Search the caller-supplied baseline first (authoritative), then fall
+        # back to the stored history. Baseline clauses arrive without embeddings.
+        clauses = list(baseline_clauses or []) + self.retriever._load_clauses()
         # Exclude clauses from the current circular to avoid self-matching
         if circular_id:
             clauses = [c for c in clauses if c.get("circular_id") != circular_id]
@@ -124,30 +150,70 @@ class PolicyIdentifier:
         # -------------------------------------------------------------
         # SIGNAL 2: Section Title / Paragraph Number Match (Structural Match)
         # -------------------------------------------------------------
-        norm_title = normalize_section_title(section_title)
-        if norm_title:
-            for c in clauses:
-                if normalize_section_title(c.get("section_title", "")) == norm_title:
-                    logger.info(f"Signal 2 Match Found: Section title match on '{c['section_title']}' (Domain: {c['domain']})")
-                    old_text_clean = strip_markdown_headers(c["raw_text"])
-                    old_text_norm = self.normalizer.normalize_for_hash(old_text_clean)
-                    old_hash = HashingEngine.generate_hash(old_text_norm)
-                    
-                    verdict = "UNCHANGED" if new_hash == old_hash else "MODIFIED"
-                    return {
-                        "verdict": verdict,
-                        "domain": c["domain"],
-                        "matched_clause": c,
-                        "similarity": 1.0,
-                        "signal": "section_title",
-                        "needs_review": False
-                    }
+        # A clause's structural identity can live in its section_title OR in a
+        # markdown heading inside its text — Node 1 stores composed labels like
+        # 'Cybersecurity - Incident Reporting' as the title and keeps the real
+        # '## Paragraph 18 ...' in the body, so we normalise both sides. A
+        # numbered marker ('paragraph_18') is authoritative; a plain slug is only
+        # a fallback, so we match structural numbers before slugs — otherwise two
+        # clauses that share a composed label would collide on the wrong number.
+        def _split_titles(*values: str) -> tuple:
+            structural, slug = set(), set()
+            for v in values:
+                n = normalize_section_title(v)
+                if not n:
+                    continue
+                (structural if re.fullmatch(r"(paragraph|section)_\d+", n) else slug).add(n)
+            return structural, slug
+
+        q_struct, q_slug = _split_titles(extract_markdown_heading(new_text), section_title)
+
+        def _title_match(query: set, pick: str):
+            # Only a title that resolves to exactly ONE clause is a match. A title
+            # that hits several (e.g. many clauses share a composed label) is
+            # ambiguous, so we don't guess — Signal 3 compares the actual text.
+            hits = [
+                c for c in clauses
+                if query & (
+                    _split_titles(c.get("section_title", ""),
+                                  extract_markdown_heading(c.get("raw_text", "")))[0 if pick == "structural" else 1]
+                )
+            ]
+            return hits[0] if len(hits) == 1 else None
+
+        matched_by_title = None
+        if q_struct:
+            matched_by_title = _title_match(q_struct, "structural")
+        if matched_by_title is None and q_slug:
+            matched_by_title = _title_match(q_slug, "slug")
+
+        if matched_by_title is not None:
+            c = matched_by_title
+            logger.info(f"Signal 2 Match Found: Section title match on '{c['section_title']}' (Domain: {c['domain']})")
+            old_text_clean = strip_markdown_headers(c["raw_text"])
+            old_text_norm = self.normalizer.normalize_for_hash(old_text_clean)
+            old_hash = HashingEngine.generate_hash(old_text_norm)
+
+            verdict = "UNCHANGED" if new_hash == old_hash else "MODIFIED"
+            return {
+                "verdict": verdict,
+                "domain": c["domain"],
+                "matched_clause": c,
+                "similarity": 1.0,
+                "signal": "section_title",
+                "needs_review": False
+            }
 
         # -------------------------------------------------------------
         # SIGNAL 3: Semantic Similarity (Fallback Match)
         # -------------------------------------------------------------
         # Generate embedding for incoming chunk
         new_emb = embed_text(new_text)
+        # Baseline clauses arrive without embeddings; compute them on the fly so
+        # the authoritative cited clauses participate in semantic matching too.
+        for c in clauses:
+            if c.get("embedding") is None and c.get("raw_text"):
+                c["embedding"] = embed_text(c["raw_text"])
         clauses_with_emb = [c for c in clauses if c.get("embedding") is not None]
 
         if new_emb is not None and clauses_with_emb:

@@ -10,30 +10,49 @@ list, see [README.md](./README.md).
 **Startup order (matters):** nodes → **blockchain** → backend → frontend. The backend
 connects to the live chain and to the nodes when it boots, so those must be up first.
 
+> **No LLM / no Ollama.** The pipeline runs fully deterministic (rule-based
+> classification + change analysis) — there are no external AI calls and nothing
+> to install for it. The LLM hooks still exist behind `NODE1_LLM_URL` /
+> `NODE2_LLM_URL` env vars but are intentionally blank/disabled.
+
 ---
 
-## 0. One-time setup (skip if already done)
+## Quick start (recommended)
+
+Two commands. `setup.ps1` once after cloning, `start-all.ps1` every time you
+want the app running — it opens every server in its own window in the right
+order (nodes → blockchain → backend → frontend):
+
+```powershell
+# from repo root, once after cloning:
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
+
+# then, with Docker Desktop running:
+powershell -ExecutionPolicy Bypass -File .\start-all.ps1
+```
+
+When the backend window prints `agents=live/live/live`, open **http://localhost:5173**.
+No Docker? Use `.\start-all.ps1 -SkipBlockchain` and set `FABRIC_ENABLED=false`
+in `backend/.env` (local hash-chain fallback, dev only).
+
+The sections below are the same startup done **manually, one terminal per
+server** — use them when you need to watch or restart an individual service.
+
+---
+
+## 0. One-time setup (manual alternative to setup.ps1)
 
 ```powershell
 # from repo root: C:\hack\Canara-ARC-Shield-
 cd backend ; npm install ; cd ..
 cd frontend ; npm install ; cd ..
-pip install fastapi "uvicorn[standard]" pydantic pydantic-settings httpx chromadb
+pip install fastapi "uvicorn[standard]" pydantic pydantic-settings httpx chromadb sentence-transformers
 ```
 
-`chromadb` is required: Node 1's semantic tier (see below) stores taxonomy
-examples in a local vector DB, and the node will not start without it.
-
-**Ollama models** (for Node 1's semantic + LLM tiers). Install [Ollama](https://ollama.com),
-then pull both models once:
-
-```powershell
-ollama pull nomic-embed-text   # embeddings for the semantic tier (~274MB)
-ollama pull deepseek-r1:8b     # LLM tier, reasoning model (~5.2GB, fits 8GB VRAM)
-```
-
-Node 1 still runs without Ollama — it degrades to keyword-only classification —
-but the semantic and LLM tiers need these models present and `ollama` serving.
+`chromadb` is required: Node 1's semantic tier stores taxonomy examples in a
+local vector DB, and the node will not start without it. `sentence-transformers`
+powers the offline embedding tier; without it Node 1 degrades to keyword-only
+classification (still works).
 
 For the blockchain you also need **Docker Desktop** running and **WSL2 Ubuntu** installed.
 
@@ -44,7 +63,7 @@ For the blockchain you also need **Docker Desktop** running and **WSL2 Ubuntu** 
 Each service prints its requests and errors to its own window. Open **four** PowerShell
 terminals. In **each**, first set the Python path, then start one service:
 
-**Terminal 1 — Node 1 (Intelligence + LLM):**
+**Terminal 1 — Node 1 (Intelligence):**
 ```powershell
 cd C:\hack\Canara-ARC-Shield-
 $env:PYTHONPATH = "C:\hack\Canara-ARC-Shield-"
@@ -193,7 +212,7 @@ $id = $up.data.id; "uploaded $id"
 # start pipeline
 Invoke-RestMethod "$base/circulars/$id/process" -Method Post -Headers $h | Out-Null
 
-# poll status until COMPLETE (~40s with deepseek on GPU)
+# poll status until COMPLETE (fast — the pipeline is fully rule-based, no LLM)
 do {
   Start-Sleep 3
   $pl = Invoke-RestMethod "$base/circulars/$id/pipeline" -Headers $h
@@ -226,8 +245,7 @@ needed.
 | What you see | Cause | Fix |
 |---|---|---|
 | Backend log: `agents=stub/stub/stub` | Node URLs blank in `backend/.env` | Set `NODE1_URL=http://localhost:8001` (and 8002/8003), restart backend |
-| Backend log: `Agent .../analyze timed out` | LLM cold-load slower than `AGENT_TIMEOUT_MS` | Raise `AGENT_TIMEOUT_MS` in `backend/.env` (currently 180000), restart backend |
-| Pipeline stuck at `CLASSIFYING`, slow | Ollama model spilling to CPU | Check `ollama ps` — want `100% GPU`. `deepseek-r1:8b` fits 8GB; `qwen3.5:9b` spills |
+| Backend log: `Agent .../analyze timed out` | A node is up but hung/overloaded | Check that node's window for a traceback; restart it. Raise `AGENT_TIMEOUT_MS` in `backend/.env` only as a last resort |
 | `UNPROCESSABLE: Unable to parse PDF` | PDF has no extractable text layer | Use a real text PDF (e.g. the included `rbi_circular_16.pdf`) |
 | Node won't start: `ModuleNotFoundError` | `PYTHONPATH` not set in that terminal | Re-run the `$env:PYTHONPATH = ...` line before uvicorn |
 | Backend log: `hash-chain` not `Fabric` | Chain not up, or `FABRIC_ENABLED=false` | Run step 2 (`start-blockchain.sh`), confirm `FABRIC_ENABLED=true`, restart backend |

@@ -1,8 +1,10 @@
 # Node 2 — MAP Engine
-# Offline rule-based analyzer; the vector clause retrieval uses the shared
-# arc_vector store (Ollama embeddings + ChromaDB).
+# Offline rule-based analyzer; vector clause retrieval embeds locally with
+# sentence-transformers (all-MiniLM-L6-v2, 384-dim). Ollama is a legacy
+# fallback only and is not required.
 fastapi>=0.110
 uvicorn>=0.27
 pydantic>=2.5
 pydantic-settings>=2.0
 chromadb>=1.0
+sentence-transformers>=5.0

@@ -33,9 +33,10 @@ _BASE_DIR = os.getenv(
 _SEMANTIC_WEIGHT = 0.7
 _KEYWORD_WEIGHT = 0.3
 # Fallback dimension for placeholder vectors when the embedding model is down.
-# Must match the embedding model's output dim (nomic-embed-text = 768) so a
-# document stored during an outage doesn't clash with real vectors later.
-_EMBED_DIM = int(os.getenv("ARC_EMBED_DIM", "768"))
+# Must match the embedding model's output dim (all-MiniLM-L6-v2 = 384; set
+# ARC_EMBED_DIM=768 if running on Ollama nomic-embed-text) so a document stored
+# during an outage doesn't clash with real vectors later.
+_EMBED_DIM = int(os.getenv("ARC_EMBED_DIM", "384"))
 _STOPWORDS = {
     "the", "and", "for", "this", "that", "with", "shall", "have", "been", "from",
     "under", "into", "such", "any", "all", "are", "may", "will", "which", "these",
