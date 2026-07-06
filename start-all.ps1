@@ -43,7 +43,10 @@ $nodes = @(
   @{ t = "Core-Systems-API";   mod = "core_systems.api:app";              port = 8004 }
 )
 foreach ($n in $nodes) {
-  $cmd = "cd '$root'; `$env:PYTHONPATH = '$root'; " +
+  # PYTHONUTF8=1 forces UTF-8 stdout so the engines' box-drawing/diff log output
+  # can't raise UnicodeEncodeError under the Windows console codepage (cp1252),
+  # which the pipeline would otherwise swallow as a per-clause failure.
+  $cmd = "cd '$root'; `$env:PYTHONPATH = '$root'; `$env:PYTHONUTF8 = '1'; " +
          "python -m uvicorn $($n.mod) --port $($n.port) --host 127.0.0.1"
   Start-Window $n.t $cmd
   Ok "$($n.t) -> :$($n.port)"

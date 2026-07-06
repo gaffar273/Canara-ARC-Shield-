@@ -1,7 +1,17 @@
+# Python virtual environments
 venv/
+.venv/
+myenv/
+
+# Python bytecode / caches
 __pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
+
+# Environment variables
 .env
+.env.local
 
 # Vector DB (regenerated at runtime from the source data)
 .chroma/
@@ -9,3 +19,21 @@ __pycache__/
 # Node / build artifacts
 node_modules/
 dist/
+package-lock.json
+
+# IDE / editor configs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude / AI assistant configs
+.claude/
+
+# OS generated files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Misc generated / large files
+# mock_db.json

@@ -85,10 +85,13 @@ async def run_map_engine(
 
     try:
         # STEP 1: Run Policy Identifier (3-Signal Match)
+        # The caller-supplied baseline (clauses of the circulars this one cites)
+        # is the authoritative prior version, searched ahead of the stored history.
         id_result = identifier.identify(
             new_text=chunk.chunk_text,
             section_title=chunk.section_title,
-            circular_id=chunk.circular_id
+            circular_id=chunk.circular_id,
+            baseline_clauses=baseline,
         )
         
         verdict = id_result["verdict"]
