@@ -105,12 +105,14 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 /** Clause-level compliance status, derived from its MAP + Node 3 verdict.
- *  MAPPED = verified satisfied, FLAGGED = Node 3 found a gap, PENDING = mapped
- *  but work not yet verified done / awaiting review, UNMAPPED = no MAP yet. */
-type ClauseStatus = "MAPPED" | "PENDING" | "FLAGGED" | "UNMAPPED";
+ *  MAPPED = verified satisfied, FLAGGED = Node 3 found a gap, REVIEW = Node 3
+ *  couldn't auto-verify (needs human), PENDING = MAP exists but not yet verified,
+ *  UNMAPPED = no MAP yet. */
+type ClauseStatus = "MAPPED" | "REVIEW" | "PENDING" | "FLAGGED" | "UNMAPPED";
 
 const CLAUSE_STATUS_STYLE: Record<ClauseStatus, { bg: string; fg: string }> = {
   MAPPED:   { bg: "#dcfce7", fg: "#15803d" },
+  REVIEW:   { bg: "#ffedd5", fg: "#c2410c" },
   PENDING:  { bg: "#fef9c3", fg: "#854d0e" },
   FLAGGED:  { bg: "#fee2e2", fg: "#b91c1c" },
   UNMAPPED: { bg: "#f1f5f9", fg: "#64748b" },
@@ -118,15 +120,21 @@ const CLAUSE_STATUS_STYLE: Record<ClauseStatus, { bg: string; fg: string }> = {
 
 function clauseStatus(
   clauseId: string,
-  maps: { id: string; clauseId: string }[],
+  maps: { id: string; clauseId: string; decision?: { status: string } | null }[],
   verifications: { mapId: string; status: string }[],
 ): ClauseStatus {
   const map = maps.find(m => m.clauseId === clauseId);
   if (!map) return "UNMAPPED";
+  // Human decision takes priority over automated verification
+  if (map.decision) {
+    if (map.decision.status === "APPROVED") return "MAPPED";
+    if (map.decision.status === "REJECTED") return "FLAGGED";
+  }
   const v = verifications.find(x => x.mapId === map.id);
   if (!v) return "PENDING";
   if (v.status === "PASS") return "MAPPED";
   if (v.status === "FAIL") return "FLAGGED";
+  if (v.status === "REVIEW") return "REVIEW";
   return "PENDING";
 }
 
@@ -864,12 +872,22 @@ function CircularDetail({ circular }: { circular: Circular }) {
             <div className="space-y-1.5">
               {verifications.map(v => {
                 const m = mapById.get(v.mapId);
+                // If the MAP has a human decision, show that instead of the raw Node 3 status
+                const effectiveStatus = m?.decision
+                  ? m.decision.status === "APPROVED" ? "PASS" : m.decision.status === "REJECTED" ? "FAIL" : v.status
+                  : v.status;
+                const effectiveScore = m?.decision
+                  ? m.decision.status === "APPROVED" ? 1.0 : m.decision.status === "REJECTED" ? 0 : v.score
+                  : v.score;
+                const decisionLabel = m?.decision
+                  ? m.decision.status === "APPROVED" ? "APPROVED" : m.decision.status === "REJECTED" ? "REJECTED" : null
+                  : null;
                 return (
                   <div key={v.id} className="flex items-center gap-3 px-3.5 py-2.5 rounded-md border border-border bg-white">
-                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded shrink-0 text-white" style={{ background: verdictColor(v.status) }}>{v.status}</span>
+                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded shrink-0 text-white" style={{ background: verdictColor(effectiveStatus) }}>{decisionLabel ?? effectiveStatus}</span>
                     <span className="text-[12.5px] flex-1" style={{ fontFamily: "Inter" }}>{m?.summary ?? v.mapId}</span>
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0" style={agentBadgeStyle(v.verifiedBy)}>{agentLabel(v.verifiedBy)}</span>
-                    <span className="font-mono text-[10px] text-muted-foreground shrink-0">{Math.round(v.score * 100)}%</span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0" style={agentBadgeStyle(v.verifiedBy)}>{m?.decision ? "Human Decision" : agentLabel(v.verifiedBy)}</span>
+                    <span className="font-mono text-[10px] text-muted-foreground shrink-0">{Math.round(effectiveScore * 100)}%</span>
                   </div>
                 );
               })}
@@ -1735,7 +1753,7 @@ function SecurityPage() {
 function SimpleDiff({ oldStr, newStr }: { oldStr: string | null; newStr: string }) {
   if (!oldStr) {
     return (
-      <div className="p-3 bg-emerald-50/50 border border-emerald-100 rounded text-emerald-950 text-[12px] font-mono whitespace-pre-wrap">
+      <div className="p-3 bg-emerald-50/50 border border-emerald-100 rounded text-emerald-950 text-[11.5px] leading-relaxed" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
         <span className="bg-emerald-100 px-1 font-bold text-emerald-800 rounded mr-1">ADD</span>
         {newStr}
       </div>
@@ -1747,16 +1765,17 @@ function SimpleDiff({ oldStr, newStr }: { oldStr: string | null; newStr: string 
   
   return (
     <div className="grid grid-cols-2 gap-4">
-      <div className="p-3 bg-red-50/40 border border-red-100 rounded text-red-950 text-[12px] font-mono leading-relaxed">
+      <div className="p-3 bg-red-50/40 border border-red-100 rounded text-red-950 text-[11.5px] leading-relaxed overflow-hidden min-w-0">
         <div className="text-[9.5px] font-bold text-red-700 uppercase mb-1.5 tracking-wider">Before (Removed/Amended)</div>
-        <div className="whitespace-pre-wrap">
+        <div style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
           {oldWords.map((word, idx) => {
             const isDigit = /\d/.test(word);
             const isMissing = !newWords.includes(word);
             return (
               <span 
                 key={idx} 
-                className={`${isMissing ? 'bg-red-100 text-red-800 line-through px-0.5 rounded font-semibold' : ''} ${isDigit && isMissing ? 'font-extrabold border-b border-red-300' : ''} mr-1`}
+                className={`${isMissing ? 'bg-red-200/70 text-red-800 line-through px-0.5 rounded font-semibold' : ''} ${isDigit && isMissing ? 'font-extrabold border-b border-red-300' : ''}`}
+                style={{ marginRight: '3px', display: 'inline' }}
               >
                 {word}
               </span>
@@ -1764,16 +1783,17 @@ function SimpleDiff({ oldStr, newStr }: { oldStr: string | null; newStr: string 
           })}
         </div>
       </div>
-      <div className="p-3 bg-emerald-50/40 border border-emerald-100 rounded text-emerald-950 text-[12px] font-mono leading-relaxed">
+      <div className="p-3 bg-emerald-50/40 border border-emerald-100 rounded text-emerald-950 text-[11.5px] leading-relaxed overflow-hidden min-w-0">
         <div className="text-[9.5px] font-bold text-emerald-700 uppercase mb-1.5 tracking-wider">After (Added/Modified)</div>
-        <div className="whitespace-pre-wrap">
+        <div style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
           {newWords.map((word, idx) => {
             const isDigit = /\d/.test(word);
             const isNew = !oldWords.includes(word);
             return (
               <span 
                 key={idx} 
-                className={`${isNew ? 'bg-emerald-100 text-emerald-800 font-semibold px-0.5 rounded' : ''} ${isDigit && isNew ? 'font-extrabold border-b border-emerald-400' : ''} mr-1`}
+                className={`${isNew ? 'bg-emerald-200/70 text-emerald-800 font-semibold px-0.5 rounded' : ''} ${isDigit && isNew ? 'font-extrabold border-b border-emerald-400' : ''}`}
+                style={{ marginRight: '3px', display: 'inline' }}
               >
                 {word}
               </span>

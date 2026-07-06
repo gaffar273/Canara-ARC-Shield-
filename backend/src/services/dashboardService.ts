@@ -111,14 +111,25 @@ export const dashboardService = {
     return { role, maps, verifications };
   },
 
-  /** Low-confidence MAPs flagged for human review, enriched with circular context. */
+  /** Low-confidence MAPs flagged for human review, enriched with circular context.
+   *  Includes MAPs where either Node 2 set needsReview (confidence < threshold)
+   *  OR Node 3 returned a REVIEW verdict (no automated check available). */
   async reviewQueue() {
     const circulars = await stateStore.listCirculars();
     const titleById = new Map(circulars.map((c) => [c.id, c.title]));
     const pipelines = await stateStore.listPipelines();
+
+    // Build a set of mapIds that Node 3 flagged as REVIEW
+    const node3ReviewIds = new Set(
+      pipelines
+        .flatMap((p) => p.verifications)
+        .filter((v) => v.status === "REVIEW")
+        .map((v) => v.mapId),
+    );
+
     const items = pipelines
       .flatMap((p) => p.maps)
-      .filter((m) => m.needsReview)
+      .filter((m) => m.needsReview || (node3ReviewIds.has(m.id) && !m.decision))
       .map((m) => ({
         ...m,
         circularTitle: titleById.get(m.circularId) ?? m.circularId,
@@ -154,7 +165,7 @@ export interface CircularStatus {
 
 function rollup(p: {
   stage: string;
-  maps: { id: string }[];
+  maps: { id: string; decision?: { status: string } | null }[];
   verifications: { mapId: string; status: VerificationStatus }[];
 }): CircularStatus {
   if (p.stage === "FAILED") return { status: "failed", total: 0, mapped: 0, pending: 0, flagged: 0 };
@@ -164,6 +175,11 @@ function rollup(p: {
   let pending = 0;
   let flagged = 0;
   for (const m of p.maps) {
+    // Human decision takes priority over automated verification
+    if (m.decision) {
+      if (m.decision.status === "APPROVED") { mapped += 1; continue; }
+      if (m.decision.status === "REJECTED") { flagged += 1; continue; }
+    }
     const v = verdictByMap.get(m.id);
     if (v === "PASS") mapped += 1;
     else if (v === "FAIL") flagged += 1;

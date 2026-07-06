@@ -11,8 +11,9 @@ from node2_map_engine.policy_retriever import embed_text
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("seed_policies")
 
-POLICIES_DIR = "/home/aarushi/Canara-ARC-Shield-/data/policies"
-DB_PATH = "/home/aarushi/Canara-ARC-Shield-/mock_db.json"
+_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+POLICIES_DIR = os.path.join(_PROJECT_ROOT, "data", "policies")
+DB_PATH = os.path.join(_PROJECT_ROOT, "mock_db.json")
 
 def slugify(text: str) -> str:
     """Creates a URL/ID safe slug from a string."""
